@@ -1,0 +1,169 @@
+<script context="module" lang="ts">
+	import {
+		MaterialAppMin,
+		ProgressLinear,
+		Button,
+		TextField,
+		AppBar,
+		Icon,
+		Card,
+	} from 'svelte-materialify/src';
+	import { mdiChevronLeft } from '@mdi/js';
+	import { goto } from '$app/navigation';
+	import { mdiEye, mdiEyeOff } from '@mdi/js';
+	import { onMount } from 'svelte';
+</script>
+
+<script lang="ts">
+	const rules = [
+		(value: string) => value.length > 3 || 'Min 4 characters',
+		(value: string) => value.length < 17 || 'Max 16 characters',
+	];
+	let showPassword = false;
+	let value = '';
+	let messages: string[] = [];
+	let valid = true;
+	let loading = true;
+	function submit() {}
+	onMount(() => {
+		loading = false;
+	});
+</script>
+
+<style lang="scss">
+	@import '../../../components/common';
+	@import '../../../components/elevation';
+	main {
+		display: flex;
+		width: 100%;
+		height: 100%;
+		padding: 32px 16px;
+		@include main;
+	}
+	.surface {
+		width: 100%;
+		height: 100%;
+		display: grid;
+		grid-auto-rows: auto;
+		row-gap: 32px;
+	}
+	fieldset {
+		display: contents;
+	}
+	legend {
+		display: grid;
+		row-gap: 16px;
+	}
+	.content {
+		width: 100%;
+		display: grid;
+		grid-template-rows: max-content max-content;
+		row-gap: 32px;
+	}
+	.btns {
+		display: grid;
+		padding: 0 16px;
+	}
+	.f-14 {
+		font-size: 14px;
+	}
+	.f-16 {
+		font-size: 16px;
+	}
+	.f-500 {
+		font-weight: 500;
+	}
+	.t-center {
+		text-align: center;
+	}
+	* :global {
+		@include common-app;
+		@include common-loader;
+		@include common-appbar;
+		.card {
+			display: grid;
+			row-gap: 16px;
+			padding: 16px;
+			@include elevation;
+		}
+		.textfield {
+			.s-text-field__input {
+				input {
+					max-height: 36px;
+					padding-bottom: 6px;
+					line-height: 34px;
+				}
+			}
+		}
+	}
+</style>
+
+<svelte:head>
+	<title>Atur Password</title>
+	<meta name="" content="" />
+</svelte:head>
+
+<div>
+	<MaterialAppMin>
+		<ProgressLinear
+			bind:active="{loading}"
+			indeterminate
+			height="4px"
+			backgroundColor="secondary-color"
+			color="secondary-color"
+		/>
+		<AppBar class="primary-color">
+			<div slot="icon">
+				<Button depressed fab text on:click="{() => history.back()}">
+					<Icon path="{mdiChevronLeft}" />
+				</Button>
+			</div>
+			<span slot="title">Reset Password</span>
+		</AppBar>
+		<main>
+			<form class="surface" on:submit|preventDefault="{submit}">
+				<fieldset>
+					<div class="content">
+						<Card class="card" outlined>
+							<legend class="t-center">
+								<div class="f-16 f-500">Atur Password Kamu</div>
+								<div class="f-14">
+									<div>Buat password baru untuk</div>
+									<div class="f-500">reskiwahdaniah123@gmail.com.</div>
+								</div></legend
+							>
+							<TextField
+								class="textfield"
+								bind:value
+								bind:messages
+								rules="{rules}"
+								filled
+								type="{showPassword ? 'text' : 'password'}"
+								required
+								>Password
+								<div
+									slot="append"
+									on:click="{() => {
+										showPassword = !showPassword;
+									}}"
+								>
+									<Icon
+										class="grey-text text-darken-3"
+										path="{showPassword ? mdiEyeOff : mdiEye}"
+									/>
+								</div></TextField
+							>
+						</Card>
+						<div class="btns">
+							<Button
+								class="primary-color black-text"
+								on:click="{() => valid && goto('/entry/reset/step-4')}"
+								>berikutnya</Button
+							>
+						</div>
+					</div>
+				</fieldset>
+			</form>
+		</main>
+	</MaterialAppMin>
+</div>

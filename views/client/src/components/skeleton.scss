@@ -1,0 +1,19 @@
+@mixin loading-sekeleton($depth: 1) {
+  color: transparent !important;
+  background: linear-gradient(to right, 
+    darken($color: white, $amount: $depth + 4),
+    darken($color: white, $amount: $depth + 8),
+    darken($color: white, $amount: $depth + 8),
+    darken($color: white, $amount: $depth + 4),
+  );
+  background-size: 200% 100%;
+  animation: loading 1s ease infinite reverse;
+  @keyframes loading {
+    0% {
+      background-position: 50%;
+    }
+    100% {
+      background-position: 250%;
+    }
+  }
+}

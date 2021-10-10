@@ -1,0 +1,25 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+@tailwind variants;
+
+$primary-color: #456BBA;
+$on-primary-color: #fff;
+
+$secondary-color: #BA45A5;
+$on-secondary-color: #fff;
+
+$complementary-color: #BA9445;
+$on-complementary-color: #fff;
+
+$tertiary-color: #45BA5A;
+$on-tertiary-color: #262626;
+
+$background-color-light: #f0f0f0;
+$on-background-color-light: #0f0f0f;
+
+$background-color-dark: #363636;
+$on-background-color-dark: #cfcfcf;
+
+$background-color: $background-color-dark;
+$on-background-color: $on-background-color-dark;

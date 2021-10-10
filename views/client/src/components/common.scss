@@ -1,0 +1,138 @@
+@mixin common-app {
+	.s-app {
+		position: relative;
+		display: grid;
+		grid-template-rows: max-content max-content auto max-content;
+		grid-template-columns: minmax(0, 100vw);
+		min-height: 100vh;
+		background-color: inherit;
+		@content;
+	}
+}
+@mixin common-loader {
+	.s-progress-linear {
+		position: sticky !important;
+		top: 0;
+		background-color: white !important;
+		z-index: 2;
+		@content;
+	}
+}
+@mixin common-appbar($class: s-app-bar) {
+	.#{$class} {
+		position: sticky;
+		top: 0;
+		z-index: 1;
+		&.top-4 {
+			top: 4px;
+		}
+		@include medium-only {
+			padding-left: 32px;
+			padding-right: 32px;
+		}
+		@include large-only {
+			padding-left: 48px;
+			padding-right: 48px;
+		}
+		@include very-large-up {
+			padding-left: 10%;
+			padding-right: 10%;
+		}
+		@content;
+	}
+}
+@mixin common-footer {
+	.s-footer {
+		position: sticky;
+		bottom: 0;
+		width: stretch;
+		height: 56px;
+		@include medium-only {
+			padding-left: 32px;
+			padding-right: 32px;
+		}
+		@include large-only {
+			padding-left: 48px;
+			padding-right: 48px;
+		}
+		@include very-large-up {
+			padding-left: 10%;
+			padding-right: 10%;
+		}
+		@content;
+	}
+}
+@mixin main {
+	@include medium-only {
+		padding: 24px 48px;
+	}
+	@include large-only {
+		padding: 24px 80px;
+	}
+	@include very-large-up {
+		padding: 24px 15%;
+	}
+}
+@mixin image($ratio: 1, $radius: 4px) {
+	object-fit: cover;
+	object-position: center;
+	width: 100%;
+	aspect-ratio: 1;
+	background-color: #f5f5f5;
+	border-radius: $radius;
+	&.e {
+		display: grid;
+		place-items: center;
+		opacity: .7;
+	}
+}
+@mixin very-small-only {
+	@media (min-width: 0px) and (max-width: 300px) {
+		@content;
+	}
+}
+@mixin small-only {
+	@media (min-width: 301px) and (max-width: 600px) {
+		@content;
+	}
+}
+@mixin medium-only {
+	@media (min-width: 601px) and (max-width: 900px) {
+		@content;
+	}
+}
+@mixin large-only {
+	@media (min-width: 901px) and (max-width: 1200px) {
+		@content;
+	}
+}
+@mixin very-large-only {
+	@media (min-width: 1201px) and (max-width: 1500px) {
+		@content;
+	}
+}
+@mixin very-small-up {
+	@media (min-width: 0px) {
+		@content;
+	}
+}
+@mixin small-up {
+	@media (min-width: 301px) {
+		@content;
+	}
+}
+@mixin medium-up {
+	@media (min-width: 601px) {
+		@content;
+	}
+}
+@mixin large-up {
+	@media (min-width: 901px) {
+		@content;
+	}
+}
+@mixin very-large-up {
+	@media (min-width: 1201px) {
+		@content;
+	}
+}
