@@ -10,9 +10,13 @@
 	import ClientApi from '$lib/client-api';
 	import UserStore from '$lib/token';
 	import Buyer from '$apis/buyer';
+	import Seller from '$apis/seller';
+	import Courier from '$apis/courier';
 
 	export interface Context {
 		buyer: Buyer;
+		seller: Seller;
+		courier: Courier;
 	}
 
 	import logo from '$static/logo.png';
@@ -22,20 +26,26 @@
 	const clientApi = new ClientApi({ base: APIS_URL, version: 'v0-alpha.1' });
 	const store = new UserStore('buyer', { debug: dev });
 	const buyer = new Buyer(clientApi, store);
+	const seller = new Seller(clientApi, store);
+	const courier = new Courier(clientApi, store);
 </script>
 
 <script lang="ts">
 	setContext<Context>('layout', {
 		buyer,
+		seller,
+		courier,
 	});
 	onMount(init);
 	onDestroy(release);
 	function init() {
 		buyer.init();
+		seller.init();
+		courier.init();
 	}
 	function release() {}
 </script>
 
-<slot />
-
 <style lang="scss"></style>
+
+<slot />
