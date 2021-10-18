@@ -6,23 +6,20 @@
 		Icon,
 		Footer,
 		Card,
+		NavigationDrawer,
 		List,
-		ListItemGroup,
+		Divider,
+		Overlay,
 		ListItem,
 		Avatar,
 		Badge,
 	} from 'svelte-materialify/src';
 	import {
-		mdiChevronLeft,
-		mdiMapMarkerRadiusOutline,
-		mdiTruckDeliveryOutline,
 		mdiHistory,
-		mdiClose,
 		mdiHomeOutline,
-		mdiAccount,
+		mdiAccountOutline,
 		mdiAccountCogOutline,
 		mdiCubeOutline,
-		mdiMapMarkerOutline,
 		mdiMessageTextOutline,
 	} from '@mdi/js';
 	import ProgressLinear from '$components/progress-linear.svelte';
@@ -30,14 +27,11 @@
 	import InitDialog from './_init-dialog.svelte';
 
 	import { getContext, onMount, onDestroy } from 'svelte';
-	import { slide } from 'svelte/transition';
-	import { writable } from 'svelte/store';
-	import { browser } from '$app/env';
-	import { wait, Diff, Currency } from '$lib/helper';
+	import { slide, fade } from 'svelte/transition';
 	import { goto } from '$app/navigation';
 	import { page } from '$app/stores';
-	import { base } from '$app/paths';
 
+	import type { ObserverUnsafe } from '$lib/helper';
 	import type { CourierClientApi } from './__layout.svelte';
 
 	const title = 'Home';
@@ -67,6 +61,7 @@
 
 <script lang="ts">
 	const client = getContext<CourierClientApi>('courier');
+	const is_desktop = getContext<ObserverUnsafe<boolean>>('is_desktop');
 	let user: CourierClientApi.Courier;
 	let delivery:
 		| (CourierClientApi.Delivery & {
@@ -77,8 +72,9 @@
 	let path = $page.path;
 	let showUserUnauthDialog = false;
 	let showInitDialog = false;
+	let pathname = $page.path;
 
-	$: isLoading = loader?.active;
+	$: loading = loader?.active;
 
 	onMount(init);
 	onDestroy(release);
@@ -98,6 +94,7 @@
 				},
 				include: { sender: true },
 			});
+			console.log(pathname);
 		} catch (error: any) {
 			showUserUnauthDialog = true;
 		} finally {
@@ -115,7 +112,11 @@
 	}
 	main {
 		padding: 16px;
-		@include main;
+		flex-grow: 1;
+	}
+	.list {
+		display: flex;
+		gap: 16px;
 	}
 	.nav {
 		width: stretch;
@@ -145,7 +146,10 @@
 	* :global {
 		@include common-app;
 		@include common-loader;
-		@include common-appbar;
+		@include common-appbar ($pad: false) {
+			z-index: 2;
+		}
+		@include common-drawer;
 		@include common-footer;
 		.nav {
 			.s-btn.icon,
@@ -167,53 +171,132 @@
 <div transition:slide>
 	<MaterialAppMin>
 		<ProgressLinear bind:this="{loader}" />
-		<AppBar class="primary-color {$isLoading ? 'top-4' : ''}">
+		<AppBar class="primary-color {$loading ? 'top-4' : ''}">
 			<!-- <span slot="icon">
-				<Button fab icon text size="small" on:click="{() => history.back()}">
-					<Icon path="{mdiChevronLeft}" />
-				</Button>
+				{#if $is_desktop}
+					<Button
+						fab
+						icon
+						text
+						size="small"
+						on:click="{() => (drawer = !drawer)}"
+					>
+						<Icon path="{mdiMenu}" />
+					</Button>
+				{/if}
 			</span> -->
 			<span slot="title">{title}</span>
 		</AppBar>
-		<main>
-			<List>
-				{#if delivery}
-					<Badge class="primary-color" dot>
-						<Card>
-							<ListItem
-								on:click="{() => goto(`/courier/delivery/${delivery?.id}`)}"
-							>
-								<span slot="prepend">
-									<Icon path="{mdiCubeOutline}" />
-								</span>
-								<span>{delivery.sender.name}</span>
-								<span slot="subtitle">{delivery.sender.place}</span>
-							</ListItem>
-						</Card>
-					</Badge>
-				{/if}
-			</List>
-		</main>
-		<Footer class="white elevation-5">
-			<nav class="nav">
-				<ul>
-					{#each navigation as item}
-						<li>
-							<Button text fab>
-								<a
-									class="{path == item.link
-										? 'primary-text'
-										: 'grey-text text-darken-3'}"
-									href="{item.link}"
-									><Icon path="{item.icon}" />
-									<div>{item.name}</div></a
+		<!-- <Overlay
+			active="{drawer}"
+			on:click="{() => (drawer = !drawer)}"
+			index="{3}"
+		/> -->
+		{#if $is_desktop}
+			<section transition:slide class="list">
+				<NavigationDrawer active="{true}" fixed="{false}" index="{1}">
+					<header class="header">
+						<Avatar>
+							{#if user?.image}
+								<img
+									class=""
+									src="{user?.image}"
+									alt="Profile"
+									on:error="{() => {
+										user.image = '';
+										user = user;
+									}}"
+								/>
+							{:else}
+								<Icon
+									class="grey-text text-darken-2"
+									path="{mdiAccountOutline}"
+								/>
+							{/if}
+						</Avatar>
+						<div class="text">
+							<h1 class="title">{user?.name}</h1>
+							<h2 class="subtitle">{user?.place}</h2>
+						</div>
+					</header>
+					<Divider />
+					<List nav>
+						{#each navigation as item}
+							<a href="{item.link}">
+								<ListItem active="{item.link == pathname}">
+									<span slot="prepend">
+										<Icon path="{item.icon}" />
+									</span>
+									{item.name}
+								</ListItem>
+							</a>
+						{/each}
+					</List>
+				</NavigationDrawer>
+				<main>
+					<List>
+						{#if delivery}
+							<Badge class="primary-color" dot>
+								<Card>
+									<ListItem
+										on:click="{() => goto(`/courier/delivery/${delivery?.id}`)}"
+									>
+										<span slot="prepend">
+											<Icon path="{mdiCubeOutline}" />
+										</span>
+										<span>{delivery.sender.name}</span>
+										<span slot="subtitle">{delivery.sender.place}</span>
+									</ListItem>
+								</Card>
+							</Badge>
+						{/if}
+					</List>
+				</main>
+				<section style="flex-grow: 1;"></section>
+			</section>
+		{:else}
+			<main>
+				<List>
+					{#if delivery}
+						<Badge class="primary-color" dot>
+							<Card>
+								<ListItem
+									on:click="{() => goto(`/courier/delivery/${delivery?.id}`)}"
 								>
-							</Button>
-						</li>
-					{/each}
-				</ul>
-			</nav>
-		</Footer>
+									<span slot="prepend">
+										<Icon path="{mdiCubeOutline}" />
+									</span>
+									<span>{delivery.sender.name}</span>
+									<span slot="subtitle">{delivery.sender.place}</span>
+								</ListItem>
+							</Card>
+						</Badge>
+					{/if}
+				</List>
+			</main>
+		{/if}
+		{#if !$is_desktop}
+			<Footer class="white elevation-5">
+				<nav class="nav">
+					<ul>
+						{#each navigation as item}
+							<li>
+								<Button text fab>
+									<a
+										class="{path == item.link
+											? 'primary-text'
+											: 'grey-text text-darken-3'}"
+										href="{item.link}"
+										><Icon path="{item.icon}" />
+										<div>{item.name}</div></a
+									>
+								</Button>
+							</li>
+						{/each}
+					</ul>
+				</nav>
+			</Footer>
+		{/if}
 		<UserUnauthDialog
 			bind:active="{showUserUnauthDialog}"
 			basepath="/courier"
