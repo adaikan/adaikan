@@ -53,6 +53,13 @@ export namespace ClientApi {
 	export namespace Admin {
 		export type Stat = AdminData.Stat;
 		export type Data = AdminData.Data;
+		export type User = AdminData.User;
+		export type Slide = AdminData.Slide;
+		export type Product = AdminData.ProductData;
+		export type Order = AdminData.OrderData;
+		export type OrderDetail = AdminData.OrderDataDetail;
+		export type Sale = AdminData.Sale;
+		export type SaleDetail = AdminData.SaleDetail;
 	}
 
 	export type Cart = CartData;
