@@ -1,60 +1,29 @@
 <script context="module" lang="ts">
 	import {
 		MaterialAppMin,
-		ProgressLinear,
-		AppBar,
 		Footer,
 		Button,
-		Icon,
-		Menu,
-		ListItem,
-		NavigationDrawer,
-		Avatar,
-		List,
-		ListItemGroup,
-		Divider,
-		Overlay,
-		Badge,
-		TextField,
-		Checkbox,
 	} from 'svelte-materialify/src';
-	import {
-		mdiMenu,
-		mdiDotsVertical,
-		mdiViewGridOutline,
-		mdiClipboardTextOutline,
-		mdiSync,
-		mdiCheck,
-		mdiTruckOutline,
-		mdiCubeOutline,
-		mdiAccount,
-		mdiRefresh,
-		mdiMagnify,
-		mdiChevronLeft,
-	} from '@mdi/js';
 	import CartCard from '$components/cart-card.svelte';
 	import Snackbar from '$components/snackbar.svelte';
 	import UserUnauthDialog from '$components/user-unauth-dialog.svelte';
 	import Address, { Map } from './_address.svelte';
+	import ProgressLinear from '$components/progress-linear.svelte';
+	import Appbar from '../_appbar.svelte';
 
 	import { onMount, onDestroy, getContext } from 'svelte';
-	import { writable } from 'svelte/store';
-	import { fade, slide } from 'svelte/transition';
-	import { browser, dev } from '$app/env';
+	import { slide } from 'svelte/transition';
 	import { goto } from '$app/navigation';
-	import { assets } from '$app/paths';
-	import { page, navigating } from '$app/stores';
+	import { page } from '$app/stores';
 	import { Currency, wait } from '$lib/helper';
 
+	import type { ObserverUnsafe } from '$lib/helper';
 	import type { BuyerClient } from '../__layout.svelte';
-
-	let showProgress = writable(true);
-	let progress = writable(0);
-	let indeterminate = writable(true);
 </script>
 
 <script lang="ts">
 	const client = getContext<BuyerClient>('buyer');
+	const is_desktop = getContext<ObserverUnsafe<boolean>>('is_desktop');
 	let buyer: BuyerClient.Buyer;
 	let address: BuyerClient.Address | null | undefined;
 	let addressList: BuyerClient.Address[] = [];
@@ -62,6 +31,7 @@
 	let product: BuyerClient.Product & { store: BuyerClient.Store };
 	let procedure: BuyerClient.Business;
 	let fakeItems = Array(4);
+	let progress: ProgressLinear;
 	let snackbar: Snackbar;
 	let orderCost = 0;
 	let deliveryCost = 0;
@@ -73,8 +43,7 @@
 	let showUserUnauthDialog = false;
 	let disableSubmit = true;
 
-	navigating.subscribe((value) => value && loading());
-
+	$: loading = progress?.active;
 	$: calculate(item);
 	$: checkAddress(address);
 
@@ -104,16 +73,10 @@
 			snackbar.setText(error.message);
 			snackbar.show();
 		} finally {
-			loaded();
+			progress.loaded();
 		}
 	}
 	async function release() {}
-	function loading() {
-		$showProgress = true;
-	}
-	function loaded() {
-		$showProgress = false;
-	}
 	function calculate(tag: any) {
 		if (!product) return;
 		itemAmount = 1;
@@ -149,7 +112,7 @@
 	}
 	async function direction(address: BuyerClient.Address) {
 		try {
-			loading();
+			progress.loading();
 			disableSubmit = true;
 			range = [];
 
@@ -188,12 +151,12 @@
 			snackbar.setText(error.message);
 			snackbar.show();
 		} finally {
-			loaded();
+			progress.loaded();
 		}
 	}
 	async function submit() {
 		try {
-			loading();
+			progress.loading();
 			disableSubmit = true;
 			if (!address) {
 				throw new Error('Alamat tidak terjangkau');
@@ -216,7 +179,7 @@
 			disableSubmit = false;
 		} finally {
 			snackbar.show();
-			loaded();
+			progress.loaded();
 		}
 	}
 </script>
@@ -229,20 +192,16 @@
 <div transition:slide>
 	<MaterialAppMin>
 		<ProgressLinear
-			bind:active="{$showProgress}"
-			bind:indeterminate="{$indeterminate}"
-			bind:value="{$progress}"
-			height="4px"
+			bind:this="{progress}"
 			backgroundColor="secondary-color"
-			color="secondary-color" />
-		<AppBar class="primary-color {$showProgress ? 'top-4' : ''}">
-			<span slot="icon">
-				<Button fab icon text size="small" on:click="{() => history.back()}">
-					<Icon path="{mdiChevronLeft}" />
-				</Button>
-			</span>
-			<span slot="title">Checkout</span>
-		</AppBar>
+			color="secondary-color"
+		/>
+		<Appbar
+			loading="{$loading}"
+			desktop="{$is_desktop}"
+			title="Checkout"
+			back_nav
+		/>
 		<main>
 			<form id="order" on:submit|preventDefault="{submit}">
 				<section class="section">
@@ -250,7 +209,7 @@
 						bind:data="{address}"
 						menu="{addressList}"
 						editAll="{editAddress}"
-						bind:loader="{$showProgress}" />
+						loader="{$loading}" />
 				</section>
 				<section class="section">
 					{#if product}
@@ -406,7 +365,6 @@
 	* :global {
 		@include common-app;
 		@include common-loader;
-		@include common-appbar;
 		@include common-footer;
 	}
 </style>
