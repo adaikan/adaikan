@@ -18,7 +18,7 @@
 		@content;
 	}
 }
-@mixin common-appbar($class: s-app-bar) {
+@mixin common-appbar($class: s-app-bar, $pad: true) {
 	.#{$class} {
 		position: sticky;
 		top: 0;
@@ -26,19 +26,60 @@
 		&.top-4 {
 			top: 4px;
 		}
-		@include medium-only {
-			padding-left: 32px;
-			padding-right: 32px;
-		}
-		@include large-only {
-			padding-left: 48px;
-			padding-right: 48px;
-		}
-		@include very-large-up {
-			padding-left: 10%;
-			padding-right: 10%;
+		@if $pad {
+			@include medium-up {
+				padding-left: 32px;
+				padding-right: 32px;
+			}
+			@include large-up {
+				padding-left: 48px;
+				padding-right: 48px;
+			}
+			@include very-large-up {
+				padding-left: 10%;
+				padding-right: 10%;
+			}
 		}
 		@content;
+	}
+}
+@mixin common-drawer {
+	.s-navigation-drawer {
+		.top-4 {
+			top: 4px;
+		}
+		.header {
+			display: flex;
+			column-gap: 16px;
+			align-items: center;
+			padding: 16px;
+			.text {
+				display: grid;
+				row-gap: 4px;
+				padding: 8px;
+			}
+			.title {
+				margin: 0;
+				font-size: 18px;
+				font-weight: 500;
+				line-height: normal;
+			}
+			.subtitle {
+				margin: 0;
+				font-size: 14px;
+				font-weight: 400;
+				line-height: normal;
+				opacity: 0.9;
+			}
+		}
+		a {
+			margin: 4px 0;
+			text-decoration: none;
+		}
+		.s-list-item__title,
+		.s-list-item__subtitle {
+			line-height: normal;
+		}
 	}
 }
 @mixin common-footer {
@@ -83,7 +124,7 @@
 	&.e {
 		display: grid;
 		place-items: center;
-		opacity: .7;
+		opacity: 0.7;
 	}
 }
 @mixin very-small-only {
