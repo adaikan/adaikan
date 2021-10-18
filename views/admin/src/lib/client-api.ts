@@ -1,6 +1,6 @@
 import Api from '$server/utility/api';
 import type { Version } from '$server/utility/api';
-import type { ServerSentEvent, WSData } from '$server/global';
+import type { ServerSentEvent, WebSocketMessage } from '$server/global';
 
 import { Promiseify } from './helper';
 
@@ -83,37 +83,46 @@ export default class ClientApi {
 		});
 	}
 	public event(options?: { endpoint?: string; persist?: boolean }) {
-		const connection = new ClientServerSentEvent({
-			debug: this.options.debug,
-			url: `${this.url}${options?.endpoint ? '/' + options?.endpoint : ''}`
-		});
-		if (options?.persist) {
-			if (this.persisted_connection.event) {
-				return this.persisted_connection.event;
-			} else {
-				return (this.persisted_connection.event = connection);
-			}
-		} else {
-			return connection;
-		}
-	}
-	public ws(options?: { endpoint?: string; persist?: boolean }) {
-		const connection = new ClientWebSocket({
-			base: this.options.wsbase,
-			path: `/${this.options.version}${this.options.path ? '/' + this.options.path : ''}${
-				options?.endpoint ? '/' + options?.endpoint : ''
-			}`,
+		return new ClientServerSentEvent({
+			url: `${this.url}${options?.endpoint ? '/' + options?.endpoint : ''}`,
+			persisted: options?.persist,
 			debug: this.options.debug
 		});
-		if (options?.persist) {
-			if (this.persisted_connection.ws) {
-				return this.persisted_connection.ws;
-			} else {
-				return (this.persisted_connection.ws = connection);
-			}
-		} else {
-			return connection;
+	}
+	public ws(options?: { endpoint?: string; persist?: boolean }) {
+		let url = this.options.wsbase;
+		if (url.startsWith('/')) {
+			url = location.origin.replace('http', 'ws') + url;
 		}
+		url += `/${this.options.version}${this.options.path ? '/' + this.options.path : ''}${
+			options?.endpoint ? '/' + options?.endpoint : ''
+		}`;
+		return new ClientWebSocket({
+			url,
+			persisted: options?.persist,
+			debug: this.options.debug
+		});
+	}
+	protected _event(options?: { endpoint?: string; persist?: boolean }) {
+		return new ClientServerSentEvent({
+			url: `${this.url}${options?.endpoint ? '/' + options?.endpoint : ''}`,
+			persisted: options?.persist,
+			debug: this.options.debug
+		});
+	}
+	protected _ws(options?: { endpoint?: string; persist?: boolean }) {
+		let url = this.options.base;
+		if (url.startsWith('/')) {
+			url = location.origin.replace('http', 'ws') + url;
+		}
+		url += `/${this.options.version}${this.options.path ? '/' + this.options.path : ''}${
+			options?.endpoint ? '/' + options?.endpoint : ''
+		}`;
+		return new ClientWebSocket({
+			url,
+			persisted: options?.persist,
+			debug: this.options.debug
+		});
 	}
 }
 
@@ -234,7 +243,7 @@ class ClientResponseApi<Body> {
 
 interface ClientServerSentEventApiOptions {
 	url: string;
-	inherit?: boolean;
+	persisted?: boolean;
 	debug?: boolean;
 }
 interface ClientServerSentEventApiHandler {
@@ -243,34 +252,65 @@ interface ClientServerSentEventApiHandler {
 
 const clientServerSentEventApiOptionsdefault: ClientServerSentEventApiOptions = {
 	url: '',
-	inherit: false,
+	persisted: false,
 	debug: true
 };
 
 class ClientServerSentEvent {
-	public open!: Promiseify<ClientServerSentEvent>;
+	static persisted: Record<string, ClientServerSentEvent> = {};
+	public opened: Promiseify<ClientServerSentEvent>;
+	public closed: Promiseify<ClientServerSentEvent>;
 	public raw!: EventSource;
 	public messageHandlers = new Map<string, Set<ClientServerSentEventApiHandler>>();
-	public options: ClientServerSentEventApiOptions;
-	constructor(options?: Partial<ClientServerSentEventApiOptions>) {
+	public options: Required<ClientServerSentEventApiOptions>;
+	constructor(options: ClientServerSentEventApiOptions) {
 		this.options = Object.seal(
 			Object.assign({}, clientServerSentEventApiOptionsdefault, options)
-		) as ClientServerSentEventApiOptions;
-		if (!this.options.inherit) {
-			this.init();
+		) as any;
+		this.opened = new Promiseify();
+		this.closed = new Promiseify();
+		if (this.options.persisted) {
+			this.assign(ClientServerSentEvent.persisted[this.options.url]);
 		}
 	}
 	protected init() {
-		this.open = new Promiseify();
-		this.raw = new EventSource(this.options.url, { withCredentials: true });
-		this.raw.addEventListener('open', (event) => {
-			this.open.resolver(this);
-		});
-		this.raw.addEventListener('message', (event) => {
-			const data: ServerSentEvent = this.serializer(event.data);
-			this.publish(data.tag, data.message);
-		});
+		if (!this.raw) {
+			this.raw = new EventSource(this.options.url, { withCredentials: true });
+		}
+		this.raw.addEventListener(
+			'open',
+			(event) => {
+				if (this.options.persisted) {
+					ClientServerSentEvent.persisted[this.options.url] = this;
+				}
+				this.opened.resolver(this);
+			},
+			{ once: true }
+		);
+		this.raw.addEventListener(
+			'close',
+			(event) => {
+				if (this.options.persisted) {
+					delete ClientServerSentEvent.persisted[this.options.url];
+				}
+				this.closed.resolver(this);
+			},
+			{ once: true }
+		);
+		this.raw.addEventListener('message', this.internal_onmessage);
+		this.options.debug && console.log('[SSE] open', this.options.url);
 	}
+	public release() {
+		this.clean();
+		this.raw.removeEventListener('message', this.internal_onmessage);
+		this.raw.close();
+		this.raw.dispatchEvent(new CloseEvent('close'));
+		this.options.debug && console.log('[SSE] close', this.options.url);
+	}
+	protected internal_onmessage = (event: MessageEvent) => {
+		const data: ServerSentEvent = this.derializer(event.data);
+		this.publish(data.tag, data.data);
+	};
 	protected publish<D = any>(tag: string, data: D) {
 		const handlers = this.messageHandlers.get(tag);
 		if (handlers) {
@@ -279,7 +319,16 @@ class ClientServerSentEvent {
 			}
 		}
 	}
-	public serializer<M = any>(message: any) {
+	protected assign(persisted: ClientServerSentEvent) {
+		if (persisted) {
+			this.opened = persisted.opened;
+			this.closed = persisted.closed;
+			this.messageHandlers = persisted.messageHandlers;
+			this.options = persisted.options;
+			this.raw = persisted.raw;
+		}
+	}
+	public derializer<M = any>(message: any) {
 		return JSON.parse(message) as M;
 	}
 	public message(tag: string, handler: (data: any) => void) {
@@ -291,16 +340,7 @@ class ClientServerSentEvent {
 			handlers.add(handler);
 			this.messageHandlers.set(tag, handlers);
 		}
-		return () => handlers?.delete(handler);
-	}
-	public clone(options?: ClientServerSentEventApiOptions) {
-		const client = new ClientServerSentEvent(Object.assign({}, this.options, options));
-		if (client.options.inherit) {
-			client.raw = this.raw;
-			client.open = this.open;
-			client.init();
-		}
-		return client;
+		return this;
 	}
 	public clean() {
 		for (const [tag, handlers] of this.messageHandlers) {
@@ -308,8 +348,14 @@ class ClientServerSentEvent {
 		}
 		this.messageHandlers.clear();
 	}
+
+	public open() {
+		this.init();
+		return this.opened;
+	}
 	public close() {
-		return this.raw.close();
+		this.release();
+		return this.closed;
 	}
 	public addEventListener<K extends keyof EventSourceEventMap>(
 		type: K,
@@ -328,44 +374,137 @@ class ClientServerSentEvent {
 }
 
 interface ClientWebSocketApiOptions {
-	base: string;
-	path: string;
-	debug: boolean;
+	url: string;
+	persisted?: boolean;
+	debug?: boolean;
+}
+interface ClientWebSocketApiHandler {
+	(data: any): void;
 }
 
 const clientWebSocketApiOptionsdefault: ClientWebSocketApiOptions = {
-	base: '',
-	path: '',
+	url: '',
+	persisted: false,
 	debug: true
 };
 
 class ClientWebSocket {
-	public open: Promiseify<this>;
-	public raw: WebSocket;
-	public options: ClientWebSocketApiOptions;
-	constructor(options?: Partial<ClientWebSocketApiOptions>) {
-		this.options = Object.seal(
-			Object.assign({}, clientWebSocketApiOptionsdefault, options)
-		) as ClientWebSocketApiOptions;
-		this.open = new Promiseify();
-		let url = this.options.base;
-		if (url.startsWith('/')) {
-			url = location.origin.replace('http', 'ws') + url;
+	static persisted: Record<string, ClientWebSocket> = {};
+
+	public opened: Promiseify<ClientWebSocket>;
+	public closed: Promiseify<ClientWebSocket>;
+	public raw!: WebSocket;
+	public options: Required<ClientWebSocketApiOptions>;
+	public messageHandlers = new Map<string, Set<ClientWebSocketApiHandler>>();
+	constructor(options?: ClientWebSocketApiOptions) {
+		this.options = Object.seal(Object.assign({}, clientWebSocketApiOptionsdefault, options)) as any;
+		this.opened = new Promiseify();
+		this.closed = new Promiseify();
+		if (this.options.persisted) {
+			this.assign(ClientWebSocket.persisted[this.options.url]);
 		}
-		this.raw = new WebSocket(url + this.options.path);
-		this.raw.addEventListener('open', (event) => {
-			this.open.resolver(this);
-		});
 	}
-	public clone(options?: ClientWebSocketApiOptions) {
-		return new ClientWebSocket(Object.assign({}, this.options, options));
+	protected init(retry?: number, times?: number) {
+		if (!this.raw) {
+			this.raw = new WebSocket(this.options.url);
+		}
+		this.raw.addEventListener(
+			'open',
+			(event) => {
+				if (this.options.persisted) {
+					ClientWebSocket.persisted[this.options.url] = this;
+				}
+				this.opened.resolver(this);
+				this.options.debug && console.log('[WS] open', this.options.url);
+			},
+			{ once: true }
+		);
+		this.raw.addEventListener(
+			'close',
+			(event) => {
+				if (this.options.persisted) {
+					delete ClientWebSocket.persisted[this.options.url];
+				}
+				this.closed.resolver(this);
+				this.options.debug && console.log('[WS] close', this.options.url);
+			},
+			{ once: true }
+		);
+		this.raw.addEventListener('message', this.internal_onmessage);
+	}
+	protected release(code?: number, reason?: string) {
+		this.clean();
+		this.raw.removeEventListener('message', this.internal_onmessage);
+		this.raw.close(code, reason);
+		return this;
+	}
+	protected internal_onmessage = (event: MessageEvent<string>) => {
+		const data: WebSocketMessage = this.derializer(event.data);
+		this.publish(data.tag, data.data);
+	};
+	protected assign(persisted: ClientWebSocket) {
+		if (persisted) {
+			this.opened = persisted.opened;
+			this.closed = persisted.closed;
+			this.messageHandlers = persisted.messageHandlers;
+			this.options = persisted.options;
+			this.raw = persisted.raw;
+		}
+	}
+	public serializer<M = any>(message: any) {
+		return JSON.stringify(message);
+	}
+	public derializer<M = any>(message: any) {
+		return JSON.parse(message) as M;
+	}
+	protected publish<D = any>(tag: string, data: D) {
+		const handlers = this.messageHandlers.get(tag);
+		if (handlers) {
+			for (const handler of handlers) {
+				handler(data);
+			}
+		}
+	}
+	public clone(options?: ClientWebSocketApiOptions & { inherit?: boolean }) {
+		const client = new ClientWebSocket(Object.assign(this.options, options));
+		if (options?.inherit) {
+			client.raw = this.raw;
+			client.opened = this.opened;
+			client.closed = this.closed;
+		}
+		return client;
+	}
+	public clean() {
+		for (const [tag, handlers] of this.messageHandlers) {
+			handlers.clear();
+		}
+		this.messageHandlers.clear();
+	}
+	public message(tag: string, handler: ClientWebSocketApiHandler) {
+		let handlers = this.messageHandlers.get(tag);
+		if (handlers) {
+			handlers.add(handler);
+		} else {
+			handlers = new Set<ClientWebSocketApiHandler>();
+			handlers.add(handler);
+			this.messageHandlers.set(tag, handlers);
+		}
+		return this;
+	}
+
+	public open(retry?: number, times?: number) {
+		this.init(retry, times);
+		return this.opened;
 	}
 	public close(code?: number, reason?: string) {
-		return this.raw.close(code, reason);
+		this.release(code, reason);
+		return this.closed;
 	}
-	public send(data: string | ArrayBufferLike | Blob | ArrayBufferView) {
-		return this.raw.send(data);
+	public send<D = any>(data: D) {
+		this.raw.send(this.serializer(data));
+		return this;
 	}
+
 	public addEventListener<K extends keyof WebSocketEventMap>(
 		type: K,
 		listener: (this: WebSocket, ev: WebSocketEventMap[K]) => any,
