@@ -79,6 +79,7 @@ export class Seed {
 						name,
 						telp: faker.phone.phoneNumber(),
 						image: faker.image.avatar(),
+						verified: true,
 						chatNode: {
 							create: {
 								role: 'buyer',
@@ -120,6 +121,7 @@ export class Seed {
 						name,
 						telp: faker.phone.phoneNumber(),
 						image: faker.image.avatar(),
+						verified: true,
 						chatNode: {
 							create: {
 								role: 'buyer',

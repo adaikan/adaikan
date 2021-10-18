@@ -1,7 +1,7 @@
 {
 	"name": "adaikan-dashboard",
 	"version": "0.1.0",
-  "description": "ada ikan web application, for admin",
+	"description": "ada ikan web application, for admin",
 	"type": "module",
 	"engines": {
 		"node": "14.18.0"
