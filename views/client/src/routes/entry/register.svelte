@@ -3,38 +3,28 @@
 	import {
 		MaterialAppMin,
 		AppBar,
-		Footer,
 		Button,
 		Icon,
 		TextField,
 	} from 'svelte-materialify/src';
 	import ProgressLinear from '$components/progress-linear.svelte';
 	import Alert from '$components/alert.svelte';
-	import {
-		mdiChevronLeft,
-		mdiChevronRight,
-		mdiStarOutline,
-		mdiStar,
-		mdiEye,
-		mdiEyeOff,
-		mdiCheck,
-	} from '@mdi/js';
+	import { mdiChevronLeft, mdiEye, mdiEyeOff } from '@mdi/js';
 
 	import { onMount, onDestroy, getContext } from 'svelte';
-	import { writable } from 'svelte/store';
-	import { fade, slide, scale } from 'svelte/transition';
-	import { getStores, navigating, page, session } from '$app/stores';
+	import { fade } from 'svelte/transition';
+	import { session } from '$app/stores';
 	import { goto } from '$app/navigation';
 
 	import * as rules from '$lib/rules';
 
 	import type { Context } from './__layout.svelte';
-	import type { BuyerClient } from '../__layout.svelte';
+	import type { ObserverUnsafe } from '$lib/helper';
 </script>
 
 <script lang="ts">
-	const { buyer } = getContext<Context>('layout');
-	const user = getContext<BuyerClient>('buyer');
+	const user = getContext<Context>('layout');
+	const is_desktop = getContext<ObserverUnsafe<boolean>>('is_desktop');
 	let alert: Alert;
 	let loader: ProgressLinear;
 	let email = '';
@@ -56,12 +46,11 @@
 			alert.hide();
 			disableSubmit = true;
 
-			const data = await buyer.register({
+			await user.buyer.register({
 				email,
 				username,
 				password,
 			});
-			user.set(data);
 
 			alert.setState('success');
 			alert.setText('Berhasil mendaftar');
@@ -85,11 +74,17 @@
 
 <style lang="scss">
 	@import '../../components/common';
+	@import '../../components/elevation';
+	.card {
+		@include elevation;
+		border-radius: 6px;
+		background-color: white;
+	}
 	main {
-		flex: 1 0 auto;
+		max-width: 100vw;
+		min-height: 100vh;
 		padding: 32px;
-		display: flex;
-		flex-flow: column nowrap;
+		display: grid;
 	}
 	form {
 		margin: auto;
@@ -99,17 +94,18 @@
 		display: grid;
 		place-items: center;
 		row-gap: 32px;
+		transition: all 250ms ease;
 		@include medium-up {
-			width: 500px;
+			width: 420px;
 		}
 	}
 	fieldset {
 		display: contents;
 	}
-	legend {
+	.title {
 		display: grid;
 		place-items: center;
-		row-gap: 16px;
+		gap: 8px;
 		font-weight: 600;
 	}
 	.content {
@@ -120,10 +116,16 @@
 	.btns {
 		width: 100%;
 		display: grid;
-		row-gap: 32px;
+		row-gap: 8px;
 	}
 	.t-center {
 		text-align: center;
+	}
+	.t-end {
+		text-align: end;
+	}
+	.f-18 {
+		font-size: 18px;
 	}
 	.f-14 {
 		font-size: 14px;
@@ -134,14 +136,17 @@
 	.w-full {
 		width: 100%;
 	}
+	.p-32 {
+		padding: 32px;
+	}
+	.spacer {
+		height: 44px;
+	}
 	* :global {
 		@include common-app;
-		@include common-appbar;
 		@include common-loader;
+		@include common-appbar;
 		.textfield {
-			.s-input input {
-				line-height: normal;
-			}
 			.s-input__slot {
 				border-radius: 6px;
 				background-color: white;
@@ -150,13 +155,26 @@
 				font-size: 13px;
 				font-weight: 500;
 			}
+			.s-text-field__input label {
+				overflow: visible;
+			}
+			.s-input input,
+			.s-list-item__title {
+				line-height: normal;
+			}
+		}
+		.hover {
+			border: 2px solid transparent;
+			&:hover {
+				border: 2px solid black;
+			}
 		}
 	}
 </style>
 
 <svelte:head>
 	<title>Mendaftar</title>
-	<meta name="" content="" />
+	<meta name="description" content="Mendaftar Akun" />
 </svelte:head>
 
 <div transition:fade class="primary-color">
@@ -170,18 +188,39 @@
 			</span>
 		</AppBar>
 		<main>
-			<form on:submit|preventDefault="{submit}">
+			{#if $is_desktop}
+				<header transition:fade class="title">
+					<img
+						class="logo"
+						src="{logo}"
+						alt="ada ikan"
+						width="64"
+						height="64"
+					/>
+					<span>Ada Ikan</span>
+				</header>
+			{/if}
+			<div class="spacer"></div>
+			<form
+				on:submit|preventDefault="{submit}"
+				class="{$is_desktop ? 'card p-32' : ''}"
+			>
 				<fieldset>
-					<legend>
-						<img
-							class="logo"
-							src="{logo}"
-							alt="ada ikan"
-							width="64"
-							height="64"
-						/>
-						<span>Buat Akun</span>
-					</legend>
+					<div class="title">
+						{#if !$is_desktop}
+							<img
+								transition:fade
+								class="logo"
+								src="{logo}"
+								alt="ada ikan"
+								width="64"
+								height="64"
+							/>
+							<span transition:fade>Mendaftar</span>
+						{:else}
+							<span class="f-18 f-500">Mendaftar</span>
+						{/if}
+					</div>
 					<div class="w-full">
 						<Alert bind:this="{alert}" />
 					</div>
@@ -189,35 +228,48 @@
 						<TextField
 							class="textfield"
 							bind:value="{email}"
-							placeholder="Email"
-							flat
-							solo
+							placeholder="{$is_desktop ? '' : 'Email'}"
+							solo="{!$is_desktop}"
+							outlined="{$is_desktop}"
 							rules="{rules.email}"
 							autocomplete="email"
 							type="email"
 							required
-						/>
+						>
+							{#if $is_desktop}
+								Email
+							{/if}
+						</TextField>
 						<TextField
 							class="textfield"
 							bind:value="{username}"
-							placeholder="Username"
-							flat
-							solo
+							placeholder="{$is_desktop ? '' : 'Username'}"
+							solo="{!$is_desktop}"
+							outlined="{$is_desktop}"
 							rules="{rules.username}"
 							autocomplete="username"
 							required
-						/>
+						>
+							{#if $is_desktop}
+								Username
+							{/if}
+						</TextField>
 						<TextField
 							class="textfield"
 							bind:value="{password}"
-							placeholder="Password"
-							flat
-							solo
+							placeholder="{$is_desktop ? '' : 'Password'}"
+							solo="{!$is_desktop}"
+							outlined="{$is_desktop}"
 							rules="{rules.password}"
 							type="{showPassword ? 'text' : 'password'}"
 							autocomplete="new-password"
 							required
 						>
+							<div>
+								{#if $is_desktop}
+									Password
+								{/if}
+							</div>
 							<div slot="append">
 								<Button
 									fab
@@ -237,12 +289,15 @@
 						</TextField>
 					</div>
 					<div class="btns">
-						<Button depressed type="submit" disabled="{disableSubmit}"
-							>Buat</Button
+						<Button
+							type="submit"
+							size="large"
+							disabled="{disableSubmit}"
+							outlined="{$is_desktop}">Daftar</Button
 						>
-						<div class="t-center">
+						<div class="t-center black-text">
 							<div class="f-14 f-500">Punya Akun?</div>
-							<a class="white-text" href="/entry/login"> Log in </a>
+							<a class="{$is_desktop ? 'primary-text' : 'white-text'}" href="/entry/login"> Log in </a>
 						</div>
 					</div>
 				</fieldset>
