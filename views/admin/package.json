@@ -17,7 +17,7 @@
 		"tailwind:dev": "npx tailwindcss -w -i ./src/styles/tailwind.css -o ./static/tailwind.css"
 	},
 	"devDependencies": {
-		"@sveltejs/kit": "next",
+		"@sveltejs/kit": "^1.0.0-next.184",
 		"@tailwindcss/forms": "^0.3.4",
 		"@tailwindcss/typography": "^0.4.1",
 		"@types/cookie": "^0.4.1",
@@ -28,24 +28,24 @@
 		"postcss-load-config": "^3.1.0",
 		"prettier": "^2.4.1",
 		"prettier-plugin-svelte": "^2.4.0",
-		"sass": "^1.42.1",
-		"svelte": "^3.43.1",
+		"sass": "^1.43.2",
+		"svelte": "^3.44.0",
 		"svelte-check": "^2.2.6",
 		"svelte-preprocess": "^4.9.7",
-		"tailwindcss": "^2.2.16",
+		"tailwindcss": "^2.2.17",
 		"tslib": "^2.3.1",
-		"typescript": "^4.4.3",
+		"typescript": "^4.4.4",
 		"vite-plugin-live-reload": "^2.1.0"
 	},
 	"dependencies": {
 		"@fontsource/fira-mono": "^4.5.0",
 		"@lukeed/uuid": "^2.0.0",
 		"@mankins/svelte-adapter-express": "0.0.5",
-		"@sveltejs/adapter-node": "^1.0.0-next.53",
-		"@sveltejs/adapter-static": "^1.0.0-next.20",
+		"@sveltejs/adapter-node": "^1.0.0-next.55",
+		"@sveltejs/adapter-static": "^1.0.0-next.21",
 		"@tailwindcss/aspect-ratio": "^0.2.1",
-		"@themesberg/flowbite": "^1.0.2",
+		"@themesberg/flowbite": "^1.0.4",
 		"cookie": "^0.4.1",
-		"daisyui": "^1.14.1"
+		"daisyui": "^1.14.5"
 	}
 }
