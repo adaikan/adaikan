@@ -1,75 +1,46 @@
 <script context="module" lang="ts">
 	import {
 		MaterialAppMin,
-		ProgressLinear,
-		AppBar,
 		Footer,
 		Button,
 		Icon,
-		Menu,
-		ListItem,
-		NavigationDrawer,
-		Avatar,
-		List,
-		ListItemGroup,
 		Divider,
-		Overlay,
-		Badge,
-		TextField,
 		Checkbox,
 	} from 'svelte-materialify/src';
-	import {
-		mdiMenu,
-		mdiDotsVertical,
-		mdiViewGridOutline,
-		mdiClipboardTextOutline,
-		mdiSync,
-		mdiCheck,
-		mdiTruckOutline,
-		mdiCubeOutline,
-		mdiAccount,
-		mdiRefresh,
-		mdiMagnify,
-		mdiChevronLeft,
-	} from '@mdi/js';
 	import CartCard from '$components/cart-card.svelte';
 	import Snackbar from '$components/snackbar.svelte';
+	import ProgressLinear from '$components/progress-linear.svelte';
+	import Appbar from './_appbar.svelte';
 
 	import { onMount, onDestroy, getContext } from 'svelte';
-	import { writable } from 'svelte/store';
-	import { fade, slide } from 'svelte/transition';
-	import { browser, dev } from '$app/env';
-	import { goto } from '$app/navigation';
-	import { assets } from '$app/paths';
-	import { page, navigating } from '$app/stores';
+	import { slide } from 'svelte/transition';
 
-	import type { BuyerClient } from './__layout.svelte';
 	import { Currency, wait } from '$lib/helper';
+
+	import type { ObserverUnsafe } from '$lib/helper';
+	import type { BuyerClient } from './__layout.svelte';
 
 	type Cart = BuyerClient.Cart;
 	type Item = BuyerClient.SelectedItem & {
 		product: BuyerClient.Product;
 	};
-
-	let showProgress = writable(true);
-	let progress = writable(0);
-	let indeterminate = writable(true);
 </script>
 
 <script lang="ts">
 	const client = getContext<BuyerClient>('buyer');
+	const is_desktop = getContext<ObserverUnsafe<boolean>>('is_desktop');
 	let buyer: BuyerClient.Buyer;
 	let cart: Cart;
 	let items: Item[] = [];
 	let fakeData = Array(4);
+	let progress: ProgressLinear;
 	let snackbar: Snackbar;
 	let total = 0;
 	let amount = 0;
 	let disableButton = true;
 	let allowUpdate = false;
 
-	navigating.subscribe((value) => value && loading());
-
+	$: loading = progress?.active;
 	$: {
 		if (cart) {
 			wait({
@@ -78,7 +49,6 @@
 				arg: cart,
 				callback: updateCart,
 			});
-			// updateCart(cart);
 			syncItems(cart.checked);
 		}
 	}
@@ -97,10 +67,8 @@
 			arg: items,
 			callback: updateItems,
 		});
-		// updateItems(items);
 		syncCart(items.every((item) => item.checked == true));
 	}
-
 	$: {
 		if (amount) {
 			disableButton = false;
@@ -108,8 +76,10 @@
 			disableButton = true;
 		}
 	}
+
 	onMount(init);
 	onDestroy(release);
+
 	async function init() {
 		try {
 			await client.ready;
@@ -132,13 +102,13 @@
 		} catch (error: any) {
 			fakeData = Array(0);
 		} finally {
-			loaded();
+			progress.loaded();
 		}
 	}
 	async function release() {}
 	async function updateCart(data: Cart) {
 		try {
-			loading();
+			progress.loading();
 			if (!allowUpdate) return;
 			await client.api.cart.update({
 				where: { id: cart.id },
@@ -148,12 +118,12 @@
 			snackbar.setText(error.message);
 			snackbar.show();
 		} finally {
-			loaded();
+			progress.loaded();
 		}
 	}
 	async function updateItems(data: Item[]) {
 		try {
-			loading();
+			progress.loading();
 			if (!allowUpdate) return;
 			await client.api.selectedItem.batch(
 				data.map((item) => {
@@ -169,7 +139,7 @@
 			snackbar.setText(error.message);
 			snackbar.show();
 		} finally {
-			loaded();
+			progress.loaded();
 		}
 	}
 	function syncCart(check: boolean) {
@@ -183,7 +153,6 @@
 				arg: cart,
 				callback: updateCart,
 			});
-			// updateCart(cart);
 		}
 	}
 	function syncItems(check: boolean) {
@@ -192,12 +161,6 @@
 			item.checked = check;
 		}
 		items = items;
-	}
-	function loading() {
-		$showProgress = true;
-	}
-	function loaded() {
-		$showProgress = false;
 	}
 	function toMoney(value: any) {
 		return 'Rp. ' + Currency.toMoney(value);
@@ -215,21 +178,16 @@
 <div transition:slide>
 	<MaterialAppMin>
 		<ProgressLinear
-			bind:active="{$showProgress}"
-			bind:indeterminate="{$indeterminate}"
-			bind:value="{$progress}"
-			class="loader"
-			height="4px"
+			bind:this="{progress}"
 			backgroundColor="secondary-color"
-			color="secondary-color" />
-		<AppBar class="primary-color {$showProgress ? 'top-4' : ''}">
-			<span slot="icon">
-				<Button fab icon text size="small" on:click="{() => history.back()}">
-					<Icon path="{mdiChevronLeft}" />
-				</Button>
-			</span>
-			<span slot="title">Troli</span>
-		</AppBar>
+			color="secondary-color"
+		/>
+		<Appbar
+			loading="{$loading}"
+			desktop="{$is_desktop}"
+			title="{$is_desktop ? '' : 'Troli'}"
+			back_nav
+		/>
 		<main class="main">
 			<section class="checked-bar">
 				{#if cart}
@@ -338,7 +296,6 @@
 	* :global {
 		@include common-app;
 		@include common-loader;
-		@include common-appbar;
 		@include common-footer;
 	}
 </style>
