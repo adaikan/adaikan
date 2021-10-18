@@ -28,12 +28,6 @@ const env = _config().parsed;
 const vite = {
 	mode: env.VITE_SERVER_ENV,
 	server: {
-		https: env.DEV
-			? {
-					key: readFileSync(join(__dirname, '192.168.43.16-key.pem')),
-					cert: readFileSync(join(__dirname, '192.168.43.16.pem')),
-			  }
-			: false,
 		proxy: {
 			[env.VITE_SERVER_BASE_API_PATH]: {
 				target: env.VITE_SERVER_ORIGIN,
@@ -46,7 +40,7 @@ const vite = {
 				rewrite: (path) => path,
 			},
 			[env.VITE_WS_SERVER_BASE_PATH]: {
-				target: env.VITE_WS_SERVER_ORIGIN,
+				target: env.VITE_SERVER_ORIGIN,
 				ws: true,
 				changeOrigin: true,
 				rewrite: (path) => path,
