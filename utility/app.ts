@@ -43,7 +43,6 @@ export default class App {
 				? { prettyPrint: { colorize: true } }
 				: {
 						prettyPrint: { colorize: true },
-						level: 'error',
 						file: path.join(env.SERVER_LOGS_DIR, 'server.log'),
 				  },
 		});
@@ -100,7 +99,6 @@ export default class App {
 			await this.app.register(import('fastify-multipart'), {
 				limits: { fileSize: 2_097_152 },
 			});
-			await this.app.register(import('fastify-sse-v2'), { retryDelay: 3000 });
 			await this.app.register(import('fastify-static'), {
 				root: env.SERVER_PUBLIC_DIR,
 				prefix: env.SERVER_STATIC_PATH,
@@ -140,6 +138,7 @@ export default class App {
 			await this.app.register(import('project/plugins/identify'));
 			await this.app.register(import('project/plugins/info'));
 			await this.app.register(import('plugins/event'));
+			await this.app.register(import('plugins/sse'));
 			await this.app.register(import('plugins/mail'), {
 				url: env.EMAIL_URL,
 			});
