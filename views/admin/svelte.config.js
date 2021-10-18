@@ -32,7 +32,7 @@ const vite = {
 				rewrite: (path) => path
 			},
 			[env.VITE_WS_SERVER_BASE_PATH]: {
-				target: env.VITE_WS_SERVER_ORIGIN,
+				target: env.VITE_SERVER_ORIGIN,
 				ws: true,
 				changeOrigin: true,
 				rewrite: (path) => path
