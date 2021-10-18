@@ -20,7 +20,10 @@ export interface ListenOptions {
 }
 export interface SendOptions {
 	from: string | { name: string; address: string };
-	to: string | { name: string; address: string } | (string | { name: string; address: string })[];
+	to:
+		| string
+		| { name: string; address: string }
+		| (string | { name: string; address: string })[];
 	replyTo?: string | { name: string; address: string };
 	priority?: 'high' | 'low' | 'normal';
 	html: string;
@@ -39,12 +42,10 @@ export class Mail {
 	public static server: SMTPServer;
 	public static client: Transporter;
 	public static url = 'smtp://username:password@smtp.example.com/?pool=true';
+	public static options: Options;
 	public static setup(opts: Options) {
-		const { verbose, url, app } = Object.assign(
-			{},
-			defOpts,
-			opts
-		) as Required<Options>;
+		this.options = Object.assign({}, defOpts, opts) as Required<Options>;
+		const { url, app } = this.options;
 		if (!app) {
 			throw new Error('App on options not exist');
 		}
@@ -56,6 +57,9 @@ export class Mail {
 		console.log(chalk.bgBlack.white`Mail Server Created`, chalk.green`[*]`);
 	}
 	public static async send(options: SendOptions) {
+		this.options.app.log.info(
+			chalk`{white Client Mail Send} {yellow from: ${options.from} to: ${options.to} reply-to ${options.replyTo}}`
+		);
 		const message = await this.client.sendMail(options);
 		return message;
 	}
