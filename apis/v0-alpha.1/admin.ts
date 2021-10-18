@@ -9,23 +9,33 @@ import type {
 	ToOptional,
 	RequestBodyFile,
 	ToDownload,
-	WSData,
+	WebSocketMessage,
 } from 'project/global';
 
-import type { Stat, Data } from 'schemas/v0-alpha.1/admin';
+import type { Stat, Data, User, Slide } from 'schemas/v0-alpha.1/admin';
 
 import fs from 'fs-extra';
 import path from 'path';
 import faker from 'faker';
 import bcrypt from 'bcrypt';
 import sharp from 'sharp';
+import chalk from 'chalk';
+import { ansiToHtml } from 'anser';
+// @ts-ignore
+import ansi from 'ansi-html-stream';
 import { on, EventEmitter } from 'events';
 import Api from 'utility/api';
-import { spawn, exec, ChildProcess } from 'child_process';
+import { spawn, ChildProcess } from 'child_process';
+import { Multipart, MultipartFields } from 'fastify-multipart';
 
 const route: FastifyPluginAsync = async (server, opts) => {
 	const {
-		env: { PROJECT_ROOT_DIR, SERVER_PUBLIC_DIR, SERVER_STATIC_PATH },
+		env: {
+			PROJECT_ROOT_DIR,
+			SERVER_PUBLIC_DIR,
+			SERVER_STATIC_PATH,
+			SERVER_LOGS_DIR,
+		},
 	} = process as Env<typeof EnvJson>;
 	const api = 'admin';
 	const version = 'v0-alpha.1';
@@ -58,7 +68,7 @@ const route: FastifyPluginAsync = async (server, opts) => {
 		event.on(`model:${table}:change`, (args: any) => {
 			modelEvent.emit('change', {
 				tag: `model:${table}:change`,
-				message: args,
+				data: args,
 			} as ServerSentEvent);
 		});
 	}
@@ -67,21 +77,12 @@ const route: FastifyPluginAsync = async (server, opts) => {
 		url: `/${api}`,
 		method: 'GET',
 		handler: (request, reply) => {
-			reply.sse(
-				(async function* () {
-					for await (const events of on(
-						modelEvent,
-						'change'
-					) as AsyncIterableIterator<ServerSentEvent[]>) {
-						for (const event of events) {
-							yield {
-								type: 'message',
-								data: JSON.stringify(event),
-							};
-						}
-					}
-				})()
-			);
+			const event = reply.createEvent();
+			modelEvent.on('change', listener);
+			event.once('close', () => modelEvent.removeListener('change', listener));
+			function listener(arg: any) {
+				event.send('message', arg);
+			}
 		},
 	});
 
@@ -89,7 +90,7 @@ const route: FastifyPluginAsync = async (server, opts) => {
 		url: `/${api}/stat`,
 		method: 'GET',
 		handler: async (request, reply) => {
-			const user = await request.identify();
+			const user = await request.identify('internal');
 			const buyer = await orm.buyer.count();
 			const seller = await orm.seller.count();
 			const courier = await orm.courier.count();
@@ -129,7 +130,7 @@ const route: FastifyPluginAsync = async (server, opts) => {
 		url: `/${api}/business`,
 		method: 'GET',
 		handler: async (request, reply) => {
-			const user = await request.identify();
+			const user = await request.identify('internal');
 			reply.ok(data.business);
 		},
 		schema: {},
@@ -141,7 +142,7 @@ const route: FastifyPluginAsync = async (server, opts) => {
 		url: `/${api}/business`,
 		method: 'PATCH',
 		handler: async (request, reply) => {
-			const user = await request.identify();
+			const user = await request.identify('internal');
 			data.business = request.body;
 			await saveData(data);
 			reply.created(data.business);
@@ -154,7 +155,7 @@ const route: FastifyPluginAsync = async (server, opts) => {
 		url: `/${api}/model`,
 		method: 'GET',
 		handler: async (request, reply) => {
-			const user = await request.identify();
+			const user = await request.identify('internal');
 			reply.ok(data.model);
 		},
 		schema: {},
@@ -166,7 +167,7 @@ const route: FastifyPluginAsync = async (server, opts) => {
 		url: `/${api}/model`,
 		method: 'PATCH',
 		handler: async (request, reply) => {
-			const user = await request.identify();
+			const user = await request.identify('internal');
 			const result = await orm.internal.findUnique({
 				where: { id: user.sub },
 			});
@@ -216,7 +217,7 @@ const route: FastifyPluginAsync = async (server, opts) => {
 		url: `/${api}/slide`,
 		method: 'GET',
 		handler: async (request, reply) => {
-			const user = await request.identify();
+			const user = await request.identify('internal');
 			reply.ok(data.slides);
 		},
 		schema: {},
@@ -225,17 +226,24 @@ const route: FastifyPluginAsync = async (server, opts) => {
 		url: `/${api}/slide`,
 		method: 'PATCH',
 		handler: async (request, reply) => {
-			const user = await request.identify();
+			const user = await request.identify('internal');
 			const files = request.files();
-			const slides: string[] = [];
+			const slides: Slide[] = [];
 
 			await fs.emptyDir(imagePath);
 
 			for await (const data of files) {
-				slides.push(path.join(imageStatic, data.filename));
-				data.file.pipe(
-					fs.createWriteStream(path.join(imagePath, data.filename))
-				);
+				const { link } = data.fields as MultipartFields & {
+					link: Multipart<string>[];
+				};
+				const id = data.fieldname;
+				const filename = path.join( id + path.extname(data.filename));
+				slides.push({
+					id: +id,
+					src: path.join(imageStatic, filename),
+					link: link[+id].value,
+				});
+				data.file.pipe(fs.createWriteStream(path.join(imagePath, filename)));
 			}
 
 			data.slides = slides as any;
@@ -243,6 +251,281 @@ const route: FastifyPluginAsync = async (server, opts) => {
 			await saveData(data);
 
 			reply.ok();
+		},
+		schema: {},
+	});
+
+	server.route<{
+		Params: { role: string; id: string };
+	}>({
+		url: `/${api}/user/:role-:id`,
+		method: 'GET',
+		handler: async (request, reply) => {
+			const user = await request.identify('internal');
+			const users: User[] = [];
+			const { role, id } = request.params;
+			if (role == 'buyer') {
+				const buyer = await orm.buyer.findFirst({
+					where: { id: +id },
+					include: { address: { take: 1, where: { selected: true } } },
+					rejectOnNotFound: true,
+				});
+				users.push({
+					id: buyer.id,
+					node: buyer.chatNodeId,
+					role: buyer.role,
+					username: buyer.username,
+					email: buyer.email,
+					telp: buyer.telp,
+					address: buyer.address[0]?.value,
+					image: buyer.image,
+				});
+			} else if (role == 'seller') {
+				const seller = await orm.seller.findFirst({
+					where: { id: +id },
+					include: { store: true },
+					rejectOnNotFound: true,
+				});
+				users.push({
+					id: seller.id,
+					node: seller.store?.chatNodeId ?? 0,
+					role: seller.role,
+					username: seller.username,
+					email: seller.email,
+					telp: seller.store?.telp,
+					address: seller.store?.address,
+					image: seller.store?.image,
+				});
+			} else if (role == 'courier') {
+				const courier = await orm.courier.findFirst({
+					where: { id: +id },
+					rejectOnNotFound: true,
+				});
+				users.push({
+					id: courier.id,
+					node: courier.chatNodeId,
+					role: courier.role,
+					username: courier.username,
+					email: courier.email,
+					telp: courier.telp,
+					address: courier.address,
+					image: courier.image,
+				});
+			}
+			reply.ok(users[0]);
+		},
+		schema: {},
+	});
+	server.route({
+		url: `/${api}/user`,
+		method: 'GET',
+		handler: async (request, reply) => {
+			const user = await request.identify('internal');
+			const buyers = await orm.buyer.findMany({
+				include: { address: { take: 1, where: { selected: true } } },
+			});
+			const sellers = await orm.seller.findMany({ include: { store: true } });
+			const couriers = await orm.courier.findMany();
+			const users: User[] = [];
+
+			for (const buyer of buyers) {
+				users.push({
+					id: buyer.id,
+					node: buyer.chatNodeId,
+					role: buyer.role,
+					username: buyer.username,
+					email: buyer.email,
+					telp: buyer.telp,
+					address: buyer.address[0]?.value,
+					image: buyer.image,
+				});
+			}
+			for (const seller of sellers) {
+				users.push({
+					id: seller.id,
+					node: seller.store?.chatNodeId ?? 0,
+					role: seller.role,
+					username: seller.username,
+					email: seller.email,
+					telp: seller.store?.telp,
+					address: seller.store?.address,
+					image: seller.store?.image,
+				});
+			}
+			for (const courier of couriers) {
+				users.push({
+					id: courier.id,
+					node: courier.chatNodeId,
+					role: courier.role,
+					username: courier.username,
+					email: courier.email,
+					telp: courier.telp,
+					address: courier.address,
+					image: courier.image,
+				});
+			}
+			reply.ok(users);
+		},
+		schema: {},
+	});
+
+	server.route<{
+		Params: { id: string };
+	}>({
+		url: `/${api}/product/:id`,
+		method: 'GET',
+		handler: async (request, reply) => {
+			const user = await request.identify('internal');
+			const products = await orm.product.findFirst({
+				where: { id: +request.params.id },
+				include: { store: true },
+				rejectOnNotFound: true,
+			});
+			reply.ok(products);
+		},
+		schema: {},
+	});
+	server.route<{}>({
+		url: `/${api}/product`,
+		method: 'GET',
+		handler: async (request, reply) => {
+			const user = await request.identify('internal');
+			const products = await orm.product.findMany({ include: { store: true } });
+			reply.ok(products);
+		},
+		schema: {},
+	});
+
+	server.route<{
+		Params: { id: string };
+	}>({
+		url: `/${api}/order/:id`,
+		method: 'GET',
+		handler: async (request, reply) => {
+			const user = await request.identify('internal');
+			const order = await orm.order.findFirst({
+				where: { id: +request.params.id },
+				include: {
+					item: { include: { product: true } },
+					delivery: {
+						include: {
+							sender: true,
+							recipient: { include: { buyer: true } },
+							courier: true,
+						},
+					},
+				},
+				rejectOnNotFound: true,
+			});
+			reply.ok(order);
+		},
+		schema: {},
+	});
+	server.route<{}>({
+		url: `/${api}/order`,
+		method: 'GET',
+		handler: async (request, reply) => {
+			const user = await request.identify('internal');
+			const orders = await orm.order.findMany({
+				include: {
+					item: { include: { product: true } },
+					delivery: { include: { sender: true, recipient: true } },
+				},
+			});
+			reply.ok(orders);
+		},
+		schema: {},
+	});
+
+	server.route<{
+		Params: { id: string };
+	}>({
+		url: `/${api}/sales/:id`,
+		method: 'GET',
+		handler: async (request, reply) => {
+			const user = await request.identify('internal');
+			const sale = await orm.order.findFirst({
+				where: { AND: [{ status: 'Done' }, { id: +request.params.id }] },
+				include: {
+					buyer: true,
+					item: { include: { product: true } },
+					delivery: {
+						include: {
+							sender: true,
+							recipient: true,
+							courier: true,
+						},
+					},
+					rating: true,
+				},
+				rejectOnNotFound: true,
+			});
+			reply.ok(sale);
+		},
+		schema: {},
+	});
+	server.route<{}>({
+		url: `/${api}/sales`,
+		method: 'GET',
+		handler: async (request, reply) => {
+			const user = await request.identify('internal');
+			const sales = await orm.order.findMany({
+				where: { status: 'Done' },
+				include: {
+					store: true,
+					item: { include: { product: true } },
+					delivery: true,
+					rating: { include: { buyer: true } },
+				},
+			});
+			reply.ok(sales);
+		},
+		schema: {},
+	});
+
+	server.route<{}>({
+		url: `/${api}/log`,
+		method: 'GET',
+		handler: async (request, reply) => {
+			const user = await request.identify('internal');
+			const dir = path.join(SERVER_LOGS_DIR, 'server.log');
+			const event = reply.createEvent();
+			const buffer = await fs.readFile(dir);
+
+			fs.watchFile(dir, listener);
+
+			event
+				.once('close', () => {
+					fs.unwatchFile(dir, listener);
+				})
+				.send('data', {
+					tag: 'initial',
+					data: ansiToHtml(buffer.toString()),
+				});
+
+			return reply;
+
+			function listener(curr: fs.Stats, prev: fs.Stats) {
+				let text = '';
+
+				fs.createReadStream(dir, { start: prev.size })
+					.on('data', (chunk) => (text += chunk))
+					.once('close', () => {
+						event.send('data', { tag: 'continue', data: ansiToHtml(text) });
+					});
+			}
+		},
+		schema: {},
+	});
+
+	server.route<{}>({
+		url: `/${api}/log`,
+		method: 'DELETE',
+		handler: async (request, reply) => {
+			const user = await request.identify('internal');
+			const dir = path.join(SERVER_LOGS_DIR, 'server.log');
+			await fs.writeFile(dir, '');
+			reply.ok(true);
 		},
 		schema: {},
 	});
