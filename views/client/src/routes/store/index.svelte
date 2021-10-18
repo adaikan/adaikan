@@ -20,18 +20,15 @@
 		CardTitle,
 	} from 'svelte-materialify/src';
 	import {
+		mdiHome,
 		mdiMenu,
 		mdiViewDashboardOutline,
 		mdiDotsVertical,
 		mdiViewGridOutline,
 		mdiClipboardTextOutline,
 		mdiCached,
-		mdiCheck,
 		mdiTruckOutline,
 		mdiStorefrontOutline,
-		mdiCubeOutline,
-		mdiFishbowlOutline,
-		mdiImageRemove,
 		mdiAccountOutline,
 		mdiRefresh,
 		mdiMessageTextOutline,
@@ -41,9 +38,8 @@
 	import ProgressLinear from '$components/progress-linear.svelte';
 	import NoStore from './_no-store-.svelte';
 	import UserUnauthDialog from '$components/user-unauth-dialog.svelte';
-
-	import { Emitter } from '$lib/event-emitter';
-	import { APIS_URL } from '$lib/env';
+	import Cards from '$components/cards.svelte';
+	import CardProduct from '$components/card.svelte';
 
 	import { onMount, onDestroy, getContext } from 'svelte';
 	import { fade, slide, scale } from 'svelte/transition';
@@ -51,6 +47,9 @@
 	import { dev } from '$app/env';
 	import { goto } from '$app/navigation';
 
+	import logo from '$static/logo.png';
+
+	import type { ObserverUnsafe } from '$lib/helper';
 	import type { SellerClientApi } from './__layout.svelte';
 
 	const navigations = [
@@ -90,29 +89,32 @@
 </script>
 
 <script lang="ts">
-	import { page, navigating } from '$app/stores';
-
+	const is_desktop = getContext<ObserverUnsafe<boolean>>('is_desktop');
 	const features = writable([
 		{
 			name: 'Pesanan',
+			desc: 'Pesanan Menunggu',
 			icon: mdiClipboardTextOutline,
 			link: 'order',
 			count: 0,
 		},
 		{
 			name: 'Di Proses',
+			desc: 'Sedang di Proses',
 			icon: mdiCached,
 			link: 'process',
 			count: 0,
 		},
 		{
 			name: 'Di Kirim',
+			desc: 'Sedang di Kirim',
 			icon: mdiTruckOutline,
 			link: 'delivery',
 			count: 0,
 		},
 		{
 			name: 'Konfirmasi',
+			desc: 'Menunggu Konfirmasi',
 			icon: mdiClipboardTextClockOutline,
 			link: 'confirm',
 			count: 0,
@@ -121,20 +123,18 @@
 
 	let client = getContext<SellerClientApi>('seller');
 	let user: SellerClientApi.Seller;
+	let store: SellerClientApi.Store & {
+		product: SellerClientApi.Product[];
+	};
 	let orders: SellerClientApi.Order[] = [];
 	let sellerName = '';
 	let storeName = '';
 	let storeImage = '';
-	let drawer = false;
 	let activeMenu = '';
 	let loading = false;
 	let showUserUnauthDialog = false;
 
-	$: {
-		if ($navigating) {
-			loader.loading();
-		}
-	}
+	$: drawer = $is_desktop;
 
 	onMount(init);
 	onDestroy(release);
@@ -151,8 +151,9 @@
 				throw new Error('No store');
 			}
 
-			const store = await client.store.search({
+			store = await client.store.search({
 				where: { id: user.storeId },
+				include: { product: true },
 				rejectOnNotFound: true,
 			});
 
@@ -168,6 +169,7 @@
 				name: string;
 				icon: string;
 				link: string;
+				desc: string;
 				count: number;
 			};
 
@@ -220,56 +222,42 @@
 
 <style lang="scss">
 	@import '../../components/common';
-	main {
-		padding: 32px 16px;
-		@include main;
-	}
 	a {
 		display: block;
 		text-decoration: none;
+	}
+	main {
+		@extend .f-grow;
+		padding: 32px 16px;
+		display: flex;
+		flex-flow: column;
+		gap: 24px;
+		a {
+			color: inherit;
+		}
+	}
+	.content {
+		display: flex;
+		gap: 16px;
+		&.multi {
+			display: grid;
+			grid-template-columns: 2.5fr 9.5fr;
+		}
+	}
+	.f-grow {
+		flex-grow: 1;
 	}
 	* :global {
 		@include common-app {
 			background-color: #f7f7f7;
 		}
-		@include common-appbar {
+		@include common-appbar($pad: false) {
+			z-index: 2;
 			.space {
 				flex-grow: 1;
 			}
 		}
-		.s-navigation-drawer {
-			position: fixed;
-			.top-4 {
-				top: 4px;
-			}
-			.header {
-				display: flex;
-				column-gap: 16px;
-				align-items: center;
-				padding: 16px;
-				.text {
-					display: grid;
-					row-gap: 4px;
-					padding: 8px;
-				}
-				.title {
-					margin: 0;
-					font-size: 18px;
-					font-weight: 500;
-					line-height: normal;
-				}
-				.subtitle {
-					margin: 0;
-					font-size: 14px;
-					font-weight: 400;
-					line-height: normal;
-					opacity: 0.9;
-				}
-			}
-			a {
-				margin: 4px 0;
-			}
-		}
+		@include common-drawer;
 		.s-list-item__title,
 		.s-list-item__subtitle {
 			line-height: normal;
@@ -282,6 +270,9 @@
 		.features {
 			display: grid;
 			gap: 16px;
+			&.list {
+				grid-auto-flow: column;
+			}
 			a {
 				text-decoration: none;
 			}
@@ -302,9 +293,21 @@
 		<ProgressLinear bind:this="{loader}" />
 		<AppBar class="primary-color {loading ? 'top-4' : ''}">
 			<div slot="icon">
-				<Button text fab size="small" depressed on:click="{toggleNavigation}">
-					<Icon path="{mdiMenu}" />
-				</Button>
+				{#if !$is_desktop}
+					<Button text fab size="small" depressed on:click="{toggleNavigation}">
+						<Icon path="{mdiMenu}" />
+					</Button>
+				{:else}
+					<a href="/">
+						<img
+							src="{logo}"
+							alt="Ada Ikan"
+							width="32"
+							height="32"
+							style="margin: 0 8px;"
+						/>
+					</a>
+				{/if}
 			</div>
 			<div slot="title">Dashboard</div>
 			<div class="space"></div>
@@ -314,6 +317,10 @@
 						<Icon path="{mdiDotsVertical}" />
 					</Button>
 				</div>
+				<ListItem on:click="{() => goto('/')}">
+					<span slot="prepend"><Icon label="home" path="{mdiHome}" /></span>
+					<span>Home</span>
+				</ListItem>
 				<ListItem on:click="{() => location.reload()}">
 					<span slot="prepend"
 						><Icon label="refresh" path="{mdiRefresh}" /></span
@@ -322,35 +329,39 @@
 				</ListItem>
 			</Menu>
 		</AppBar>
-		<NavigationDrawer
-			class="{loading ? 'top-4' : ''}"
-			active="{drawer}"
-			index="{4}"
-		>
-			<header class="header">
-				<Avatar>
-					{#if storeImage}
-						<img
-							class=""
-							src="{storeImage}"
-							alt="{storeName}"
-							on:error="{() => (storeImage = '')}"
-						/>
-					{:else}
-						<Icon
-							class="grey-text text-darken-2"
-							path="{mdiStorefrontOutline}"
-						/>
-					{/if}
-				</Avatar>
-				<div class="text">
-					<h1 class="title">{sellerName}</h1>
-					<h2 class="subtitle">{storeName}</h2>
-				</div>
-			</header>
-			<Divider />
-			<List nav dense>
-				<ListItemGroup>
+		{#if !$is_desktop}
+			<Overlay active="{drawer}" on:click="{toggleNavigation}" index="{3}" />
+		{/if}
+		<section class="content {$is_desktop ? 'multi' : ''}">
+			<NavigationDrawer
+				class="{loading ? 'top-4' : ''}"
+				active="{drawer}"
+				index="{$is_desktop ? 1 : 4}"
+				fixed="{!$is_desktop}"
+			>
+				<header class="header">
+					<Avatar>
+						{#if storeImage}
+							<img
+								class=""
+								src="{storeImage}"
+								alt="{storeName}"
+								on:error="{() => (storeImage = '')}"
+							/>
+						{:else}
+							<Icon
+								class="grey-text text-darken-2"
+								path="{mdiStorefrontOutline}"
+							/>
+						{/if}
+					</Avatar>
+					<div class="text">
+						<h1 class="title">{sellerName}</h1>
+						<h2 class="subtitle">{storeName}</h2>
+					</div>
+				</header>
+				<Divider />
+				<List nav dense="{!$is_desktop}">
 					{#each navigations as item}
 						<a href="{item.link}">
 							<ListItem active="{item.link == activeMenu}">
@@ -361,35 +372,68 @@
 							</ListItem>
 						</a>
 					{/each}
-				</ListItemGroup>
-			</List>
-		</NavigationDrawer>
-		<Overlay active="{drawer}" on:click="{toggleNavigation}" index="{3}" />
-		<main>
-			<List class="features">
-				{#each $features as item}
-					<Badge
-						class="primary-color"
-						bordered
-						value="{item.count + ''}"
-						active="{item.count > 0}"
-						offsetX="{16}"
-						offsetY="{16}"
-					>
-						<a href="/store/{item.link}">
-							<Card link>
-								<ListItem>
-									<div slot="prepend">
-										<Icon path="{item.icon}" />
-									</div>
-									<div>{item.name}</div>
-								</ListItem>
-							</Card>
-						</a>
-					</Badge>
-				{/each}
-			</List>
-		</main>
+				</List>
+			</NavigationDrawer>
+			<main>
+				<List class="features {$is_desktop ? 'list' : ''}">
+					{#each $features as item}
+						{#if $is_desktop}
+							<a href="/store/{item.link}">
+								<Card link>
+									<ListItem>
+										<div slot="append">
+											<Icon path="{item.icon}" />
+										</div>
+										<div>{item.name}</div>
+										<div>{item.count}</div>
+									</ListItem>
+								</Card>
+							</a>
+						{:else}
+							<Badge
+								class="primary-color"
+								bordered
+								value="{item.count + ''}"
+								active="{item.count > 0}"
+								offsetX="{16}"
+								offsetY="{16}"
+							>
+								<a href="/store/{item.link}">
+									<Card link>
+										<ListItem>
+											<div slot="prepend">
+												<Icon path="{item.icon}" />
+											</div>
+											<div>{item.name}</div>
+										</ListItem>
+									</Card>
+								</a>
+							</Badge>
+						{/if}
+					{/each}
+				</List>
+				<Cards>
+					{#if store}
+						{#each store.product as product}
+							<a href="/store/products/{product.id}">
+								<CardProduct
+									data="{{
+										image: product.image,
+										name: product.name,
+										price: product.price,
+										stock: product.stock,
+									}}"
+								/></a
+							>
+						{/each}
+					{:else}
+						{#each Array(6) as value}
+							<CardProduct />
+						{/each}
+					{/if}
+				</Cards>
+			</main>
+		</section>
 		<UserUnauthDialog bind:active="{showUserUnauthDialog}" basepath="/store" />
 		<NoStore bind:this="{noStore}" />
 	</MaterialAppMin>
