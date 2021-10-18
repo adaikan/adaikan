@@ -79,11 +79,9 @@ export type ToDownload<O, K = any> = O extends Array<infer I>
 export type User = 'buyer' | 'seller' | 'courier' | 'internal';
 export type ServerSentEvent<M = any> = {
 	tag: string;
-	message: M;
+	data: M;
 };
-export type WSData<M = any> = {
+export type WebSocketMessage<M = any> = {
 	tag: string;
-	message: M;
-	status: string;
-	code: number;
+	data: M;
 };
