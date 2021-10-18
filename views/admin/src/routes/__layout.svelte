@@ -3,7 +3,6 @@
 	import { ClientApi } from '$apis/index';
 	import { APIS_URL, FETCH_MODE, WS_URL } from '$lib/env';
 	import { user, setting } from '$lib/store';
-	import { registerService } from '$lib/service-register';
 	import { dev } from '$app/env';
 
 	export type { Setting, User } from '$lib/store';
@@ -59,6 +58,9 @@
 	::-webkit-scrollbar-thumb:hover {
 		@apply bg-primary;
 	}
+	.toggle[type='checkbox'] {
+		background-image: none;
+	}
 	.toggle[type='checkbox']:checked:hover {
 		background-color: var(--chkbg);
 	}
@@ -74,8 +76,32 @@
 		box-shadow: var(--handleoffset) 0 0 2px hsl(var(--b1)) inset, 0 0 0 2px hsl(var(--b1)) inset,
 			var(--focus-shadow), 0px 0px 0px 2px hsl(var(--b1)), 0px 0px 0px 4px hsl(var(--p));
 	}
-	.toggle[type='checkbox'] {
-		background-image: none;
+	.toggle[type='checkbox']:hover {
+		box-shadow: calc(var(--handleoffset) * -1) 0 0 2px hsl(var(--b1)) inset,
+			0 0 0 2px hsl(var(--b1)) inset, var(--focus-shadow), 0px 0px 0px 2px hsl(var(--b1)),
+			0px 0px 0px 4px hsl(var(--p));
+	}
+	.toggle[type='checkbox']:checked:hover {
+		box-shadow: var(--handleoffset) 0 0 2px hsl(var(--b1)) inset, 0 0 0 2px hsl(var(--b1)) inset,
+			var(--focus-shadow), 0px 0px 0px 2px hsl(var(--b1)), 0px 0px 0px 4px hsl(var(--p));
+	}
+	.stack.stack-x > :first-child {
+		transform: translateX(0) scale(1);
+		z-index: 3;
+		opacity: 1;
+	}
+	.stack.stack-x > :nth-child(2) {
+		transform: translateX(0.5rem) scale(0.95);
+		z-index: 2;
+		opacity: 0.8;
+	}
+	.stack.stack-x > * {
+		grid-column-start: 1;
+		grid-row-start: 1;
+		transform: translateX(1rem) scale(0.9);
+		z-index: 1;
+		width: 100%;
+		opacity: 0.6;
 	}
 	html {
 		scrollbar-width: thin;
