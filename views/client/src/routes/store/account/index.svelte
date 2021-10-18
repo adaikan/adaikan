@@ -3,33 +3,20 @@
 		MaterialAppMin,
 		ProgressLinear,
 		AppBar,
-		Footer,
 		Button,
 		Icon,
-		Menu,
-		NavigationDrawer,
 		Avatar,
 		List,
 		ListGroup,
 		ListItem,
-		ListItemGroup,
 		Card,
 		Divider,
-		TextField,
-		Checkbox,
 	} from 'svelte-materialify/src';
 	import UserUnauthDialog from '$components/user-unauth-dialog.svelte';
 	import {
 		mdiAccountOutline,
-		mdiClipboardListOutline,
 		mdiBellOutline,
-		mdiTagOutline,
 		mdiLogout,
-		mdiAccountCircle,
-		mdiMapMarkerRadiusOutline,
-		mdiCheck,
-		mdiEyeOff,
-		mdiEye,
 		mdiStorefrontOutline,
 		mdiDeleteOutline,
 		mdiChevronLeft,
@@ -40,10 +27,8 @@
 
 	import { onMount, onDestroy, getContext } from 'svelte';
 	import { writable } from 'svelte/store';
-	import { fade, slide } from 'svelte/transition';
-	import { browser, dev } from '$app/env';
+	import { slide } from 'svelte/transition';
 	import { goto } from '$app/navigation';
-	import { assets } from '$app/paths';
 
 	import type { SellerClientApi } from '../__layout.svelte';
 
@@ -107,8 +92,8 @@
 			action() {},
 		},
 	];
-	let user: SellerClientApi.Data.Seller;
-	let store: SellerClientApi.Data.Store;
+	let user: SellerClientApi.Seller;
+	let store: SellerClientApi.Store;
 	let showUserUnauthDialog = false;
 
 	$: {
@@ -143,9 +128,6 @@
 	}
 	function loaded() {
 		$showProgress = false;
-	}
-	async function download(url: string) {
-		return URL.createObjectURL(await client.store.downloadImage(url));
 	}
 </script>
 

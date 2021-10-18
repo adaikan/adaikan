@@ -5,11 +5,7 @@ import type {
 	CheckoutData,
 	OrderData,
 } from '$server/schemas/v0-alpha.1/business';
-export type {
-	Data,
-	CheckoutData,
-	OrderData,
-};
+export type { Data, CheckoutData, OrderData };
 export default class AddressClientApi {
 	api: ClientApi;
 	token: Token;
@@ -50,7 +46,7 @@ export default class AddressClientApi {
 				endpoint: 'slide',
 				headers: { authorization: 'Bearer ' + (await this.getToken()) },
 			})
-			.send<string[]>();
+			.send<{ id: number; src: string; link: string }[]>();
 		return response.read();
 	}
 

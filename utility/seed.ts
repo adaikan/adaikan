@@ -58,7 +58,7 @@ export class Seed {
 								role: 'internal',
 								name: 'Internal Group',
 								type: 'PerToGroup',
-								image: (faker.image as any).unsplash.business(),
+								image: (faker.image as any).lorempixel.business(),
 								channel: { create: { type: 'PerToGroup' } },
 							},
 						},
@@ -371,15 +371,7 @@ export class Seed {
 						openAt: '',
 						link: '',
 					},
-					slides: [
-						(faker.image as any).unsplash.technology(),
-						(faker.image as any).unsplash.technology(),
-						(faker.image as any).unsplash.technology(),
-						(faker.image as any).unsplash.technology(),
-					],
-					config: {
-						lockModel: false,
-					},
+					slides: [],
 				});
 
 				await fs.promises.writeFile(

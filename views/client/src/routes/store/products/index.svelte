@@ -12,24 +12,13 @@
 		ListItemGroup,
 		Divider,
 		Overlay,
-		Badge,
-		CardActions,
-		CardSubtitle,
-		CardText,
-		CardTitle,
 	} from 'svelte-materialify/src';
 	import {
 		mdiMenu,
 		mdiViewDashboardOutline,
 		mdiDotsVertical,
 		mdiViewGridOutline,
-		mdiClipboardTextOutline,
-		mdiCached,
-		mdiCheck,
-		mdiTruckOutline,
 		mdiStorefrontOutline,
-		mdiCubeOutline,
-		mdiFishbowlOutline,
 		mdiAccountOutline,
 		mdiRefresh,
 		mdiPlus,
@@ -99,9 +88,9 @@
 
 <script lang="ts">
 	const client = getContext<SellerClientApi>('seller');
-	let seller: SellerClientApi.Data.Seller;
-	let store: SellerClientApi.Data.Store & {
-		product: SellerClientApi.Data.Product[];
+	let seller: SellerClientApi.Seller;
+	let store: SellerClientApi.Store & {
+		product: SellerClientApi.Product[];
 	};
 	let loader: ProgressLinear;
 	let sellerName = '';
@@ -231,7 +220,7 @@
 									image: product.image,
 									name: product.name,
 									price: product.price,
-									store: store.name,
+									stock: product.stock,
 								}}"
 								imageLoader="{getImageUrl}" /></a>
 					{/each}

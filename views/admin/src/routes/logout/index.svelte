@@ -11,6 +11,7 @@
 	import Progress from '$components/progress.svelte';
 
 	import { goto } from '$app/navigation';
+	import { base } from '$app/paths';
 
 	import type { ClientApi, User } from '../__layout.svelte';
 
@@ -28,7 +29,7 @@
 		try {
 			await client.ready;
 			await client.internal.token.remove();
-      goto('/', {replaceState: true});
+			goto(base + '/', { replaceState: true });
 		} catch (error: any) {
 			console.error(error);
 		} finally {

@@ -1,60 +1,32 @@
 <script context="module" lang="ts">
 	import {
 		MaterialAppMin,
-		ProgressLinear,
-		AppBar,
-		Footer,
 		Button,
 		Icon,
-		Menu,
-		ListItem,
-		NavigationDrawer,
-		Avatar,
-		List,
-		ListItemGroup,
 		Divider,
-		Overlay,
-		Badge,
 		TextField,
-		Checkbox,
 	} from 'svelte-materialify/src';
 	import {
-		mdiMenu,
-		mdiDotsVertical,
-		mdiViewGridOutline,
-		mdiClipboardTextOutline,
-		mdiSync,
-		mdiCheck,
-		mdiTruckOutline,
-		mdiCubeOutline,
-		mdiAccount,
-		mdiRefresh,
 		mdiMagnify,
 		mdiChevronLeft,
 		mdiSendOutline,
 		mdiAccountOutline,
-		mdiAttachment,
 	} from '@mdi/js';
-	import CartCard from '$components/cart-card.svelte';
 	import Snackbar from '$components/snackbar.svelte';
+	import ProgressLinear from '$components/progress-linear.svelte';
+	import Appbar from '../_appbar.svelte';
 
 	import { onMount, onDestroy, getContext } from 'svelte';
-	import { writable } from 'svelte/store';
-	import { fade, slide, scale } from 'svelte/transition';
-	import { browser, dev } from '$app/env';
-	import { goto } from '$app/navigation';
-	import { assets } from '$app/paths';
-	import { page, navigating } from '$app/stores';
+	import { slide, scale } from 'svelte/transition';
+	import { page } from '$app/stores';
 
+	import type { ObserverUnsafe } from '$lib/helper';
 	import type { BuyerClient } from '../__layout.svelte';
-
-	let showProgress = writable(true);
-	let progress = writable(0);
-	let indeterminate = writable(true);
 </script>
 
 <script lang="ts">
 	const client = getContext<BuyerClient>('buyer');
+	const is_desktop = getContext<ObserverUnsafe<boolean>>('is_desktop');
 	let buyer: BuyerClient.Buyer;
 	let snackbar: Snackbar;
 	let contact: BuyerClient.Chat.Contact | undefined;
@@ -62,6 +34,7 @@
 	let findContacts: BuyerClient.Chat.Contact[] = [];
 	let fakeContact = Array(4);
 	let unsubscribers: Function[] = [];
+	let progress: ProgressLinear;
 	let searchText = '';
 	let messageText = '';
 	let sendDisable = true;
@@ -70,8 +43,7 @@
 	let screen: 'desktop' | 'mobile' = 'mobile';
 	let id = +$page.params.id;
 
-	navigating.subscribe((value) => value && loading());
-
+	$: loading = progress?.active;
 	$: contact && content && scrollContent();
 	$: searchText && search();
 	$: {
@@ -161,18 +133,12 @@
 			snackbar.show();
 		} finally {
 			sendDisable = false;
-			loaded();
+			progress.loaded();
 		}
 	}
 	async function release() {
 		sendDisable = true;
 		unsubscribers.forEach((unsubscribe) => unsubscribe());
-	}
-	function loading() {
-		$showProgress = true;
-	}
-	function loaded() {
-		$showProgress = false;
 	}
 	async function search() {
 		let regex = new RegExp(searchText, 'ig');
@@ -180,7 +146,7 @@
 	}
 	async function send() {
 		try {
-			loading();
+			progress.loading();
 			sendDisable = true;
 			if (!contact) {
 				throw new Error('Kontak tidak ditemukan');
@@ -199,7 +165,7 @@
 			snackbar.show();
 		} finally {
 			sendDisable = false;
-			loaded();
+			progress.loaded();
 		}
 	}
 	function scrollContent() {
@@ -222,6 +188,7 @@
 	.card {
 		@include elevation;
 		border-radius: 6px;
+		background-color: white;
 	}
 	.thumb {
 		@include image;
@@ -324,7 +291,6 @@
 			overflow-y: auto;
 		}
 		@include common-loader;
-		@include common-appbar(appbar);
 		@include common-footer;
 		.s-input {
 			label {
@@ -342,22 +308,16 @@
 <div bind:clientWidth="{width}" transition:slide>
 	<MaterialAppMin>
 		<ProgressLinear
-			bind:active="{$showProgress}"
-			bind:indeterminate="{$indeterminate}"
-			bind:value="{$progress}"
-			class="loader"
-			height="4px"
+			bind:this="{progress}"
 			backgroundColor="secondary-color"
 			color="secondary-color"
 		/>
-		<AppBar class="appbar primary-color {$showProgress ? 'top-4' : ''}">
-			<span slot="icon">
-				<Button fab icon text size="small" on:click="{() => history.back()}">
-					<Icon path="{mdiChevronLeft}" />
-				</Button>
-			</span>
-			<span slot="title">Pesan</span>
-		</AppBar>
+		<Appbar
+			loading="{$loading}"
+			desktop="{$is_desktop}"
+			title="{$is_desktop ? '' : 'Pesan'}"
+			back_nav
+		/>
 		<main class="{screen}">
 			<section class="card {screen == 'mobile' && contact ? 'hide' : ''}">
 				<form

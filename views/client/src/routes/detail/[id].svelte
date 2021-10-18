@@ -1,73 +1,39 @@
 <script context="module" lang="ts">
+	import { MaterialAppMin, Button, Icon } from 'svelte-materialify/src';
 	import {
-		MaterialAppMin,
-		ProgressLinear,
-		AppBar,
-		Footer,
-		Button,
-		Icon,
-		Menu,
-		ListItem,
-		NavigationDrawer,
-		Avatar,
-		List,
-		ListItemGroup,
-		Divider,
-		Overlay,
-		Badge,
-		TextField,
-		Checkbox,
-	} from 'svelte-materialify/src';
-	import {
-		mdiMenu,
-		mdiDotsVertical,
-		mdiViewGridOutline,
-		mdiClipboardTextOutline,
-		mdiSync,
-		mdiCheck,
-		mdiTruckOutline,
-		mdiCubeOutline,
-		mdiAccount,
-		mdiRefresh,
-		mdiMagnify,
 		mdiImageRemove,
-		mdiChevronLeft,
-		mdiImageBrokenVariant,
 		mdiMapMarkerOutline,
 		mdiStorefrontOutline,
 	} from '@mdi/js';
+	import ProgressLinear from '$components/progress-linear.svelte';
+	import Appbar from '../_appbar.svelte';
 	import Snackbar from './_snackbar.svelte';
+	import Footer from './_footer.svelte';
 
 	import { onMount, onDestroy, getContext } from 'svelte';
-	import { writable } from 'svelte/store';
-	import { fade, slide } from 'svelte/transition';
-	import { browser, dev } from '$app/env';
+	import { slide } from 'svelte/transition';
 	import { goto } from '$app/navigation';
-	import { assets } from '$app/paths';
-	import { Promiseify } from '$lib/helper';
 	import navigation from '$lib/detail-nav';
 	import { Currency } from '$lib/helper';
-	import { page, navigating } from '$app/stores';
+	import { page } from '$app/stores';
 
+	import type { ObserverUnsafe } from '$lib/helper';
 	import type { BuyerClient } from '../__layout.svelte';
-
-	const theme = writable<'light' | 'dark'>('light');
-	const showProgress = writable(true);
-	const progress = writable(0);
-	const indeterminate = writable(true);
 </script>
 
 <script lang="ts">
 	const client = getContext<BuyerClient>('buyer');
+	const is_desktop = getContext<ObserverUnsafe<boolean>>('is_desktop');
+	let progress: ProgressLinear;
 	let product: (BuyerClient.Product & { store: BuyerClient.Store }) | null;
 	let snackbar: Snackbar;
 	let id = +$page.params.id;
 
+	$: loading = progress?.active;
 	$: image = product?.image;
 
 	navigation[0].action = chat;
 	navigation[1].action = addToCart;
-	navigating.subscribe((value) => value && loading());
 
 	onMount(init);
 	onDestroy(release);
@@ -81,22 +47,16 @@
 			snackbar.setText(error.message);
 			snackbar.show();
 		} finally {
-			loaded();
+			progress.loaded();
 		}
 	}
 	async function release() {}
-	function loading() {
-		$showProgress = true;
-	}
-	function loaded() {
-		$showProgress = false;
-	}
 	function toMoney(value: any) {
 		return 'Rp. ' + Currency.toMoney(value);
 	}
 	async function chat(event: Event) {
 		try {
-			loading();
+			progress.loading();
 			event.preventDefault();
 
 			if (!product) throw new Error('Produk tidak ditemukan');
@@ -114,12 +74,12 @@
 			}
 		} finally {
 			snackbar.show();
-			loaded();
+			progress.loaded();
 		}
 	}
 	async function addToCart(event: Event) {
 		try {
-			loading();
+			progress.loading();
 			event.preventDefault();
 
 			if (!product) throw new Error('Produk tidak ditemukan');
@@ -170,7 +130,7 @@
 			}
 		} finally {
 			snackbar.show();
-			loaded();
+			progress.loaded();
 		}
 	}
 </script>
@@ -178,9 +138,15 @@
 <style lang="scss">
 	@import '../../components/common';
 	@import '../../components/skeleton';
+	@import '../../components/elevation';
 	.loading {
 		@include loading-sekeleton;
 		min-height: 28px;
+	}
+	.card {
+		@include elevation;
+		border-radius: 6px;
+		background-color: white;
 	}
 	main {
 		padding: 24px 16px;
@@ -198,23 +164,28 @@
 	figure {
 		display: grid;
 		align-content: start;
-		gap: 32px;
+		gap: 16px;
 		@include medium-only {
 			grid-template-columns: 2.5fr 5.5fr;
 		}
 		@include large-only {
 			grid-template-columns: 3.5fr 6.5fr;
-			gap: 48px;
+			gap: 24px;
 		}
 		@include very-large-up {
 			grid-template-columns: 4.5fr 7.5fr;
-			gap: 48px;
+			gap: 32px;
 		}
 	}
 	figcaption {
 		display: grid;
 		row-gap: 28px;
+		padding: 16px;
 		align-content: start;
+	}
+	.t-20 {
+		font-size: 20px;
+		line-height: normal;
 	}
 	.t-18 {
 		font-size: 18px;
@@ -227,6 +198,9 @@
 	.t-14 {
 		font-size: 14.8px;
 		line-height: normal;
+	}
+	.t-700 {
+		font-weight: 700;
 	}
 	.t-500 {
 		font-weight: 500;
@@ -247,6 +221,9 @@
 	.subsection {
 		display: grid;
 		row-gap: 8px;
+		&.list {
+			grid-auto-flow: column;
+		}
 	}
 	.column {
 		display: grid;
@@ -266,79 +243,56 @@
 	}
 	.nav {
 		display: grid;
-		place-items: center;
-		width: 50%;
 		ul {
 			padding: 0;
 			display: flex;
-			justify-content: space-evenly;
-			width: stretch;
+			gap: 8px;
 		}
 		li {
 			list-style: none;
 			padding: 2px;
 		}
 		a {
+			width: 100%;
 			display: grid;
-			justify-items: center;
-			row-gap: 2px;
-			border-radius: 6px;
+			grid-auto-flow: column;
+			justify-content: start;
+			align-content: center;
+			align-items: center;
+			gap: 8px;
 			text-transform: capitalize;
-			font-size: 11px;
-		}
-	}
-	.btn {
-		display: grid;
-		place-items: center;
-		width: 50%;
-		a {
-			display: grid;
-			padding: 0 16px;
-			width: stretch;
 		}
 	}
 	* :global {
 		@include common-app;
 		@include common-loader;
-		@include common-appbar;
-		@include common-footer {
-			.s-btn.icon,
-			.s-btn.s-btn--fab {
-				border-radius: 6px;
-			}
-		}
 	}
 </style>
 
 <svelte:head>
 	<title>Detail</title>
-	<meta name="" content="" />
+	<meta name="description" content="{product?.name} {product?.description}" />
 </svelte:head>
 
 <div transition:slide>
-	<MaterialAppMin theme="{$theme}">
+	<MaterialAppMin>
 		<ProgressLinear
-			bind:active="{$showProgress}"
-			bind:indeterminate="{$indeterminate}"
-			bind:value="{$progress}"
-			height="4px"
+			bind:this="{progress}"
 			backgroundColor="secondary-color"
 			color="secondary-color"
 		/>
-		<AppBar class="primary-color {$showProgress ? 'top-4' : ''}">
-			<span slot="icon">
-				<Button fab icon text size="small" on:click="{() => history.back()}">
-					<Icon path="{mdiChevronLeft}" />
-				</Button>
-			</span>
-			<span slot="title">Detail</span>
-		</AppBar>
+		<Appbar
+			loading="{$loading}"
+			desktop="{$is_desktop}"
+			title="Detail"
+			back_nav
+		/>
 		<main>
 			<figure>
 				{#if product}
 					{#if image}
 						<img
-							class="image"
+							class="image loading {$is_desktop ? 'card' : ''}"
 							src="{image}"
 							alt="{product.name}"
 							on:error="{() => (image = '')}"
@@ -348,9 +302,9 @@
 							<Icon size="{48}" path="{mdiImageRemove}" />
 						</div>
 					{/if}
-					<figcaption>
+					<figcaption class="{$is_desktop ? 'card' : ''}">
 						<section class="subsection">
-							<h1 class="t-18 t-500">{product.name}</h1>
+							<h1 class="t-20 t-700">{product.name}</h1>
 							<section class="subsection">
 								<div class="t-16 t-500">{toMoney(product.price)}</div>
 								<div class="">
@@ -389,6 +343,38 @@
 								</div>
 							</section>
 						</section>
+						{#if $is_desktop}
+							<section class="subsection list">
+								<nav class="nav">
+									<ul>
+										{#each navigation as item}
+											<li style="flex-grow: 1;">
+												<Button block outlined class="primary-color">
+													<a
+														class="grey-text text-darken-3"
+														href="{item.link}"
+														on:click="{item.action}"
+													>
+														<Icon path="{item.icon}" />
+														<div>{item.short}</div>
+													</a>
+												</Button>
+											</li>
+										{/each}
+										<li style="flex-grow: 5;">
+											<Button block class="primary-color">
+												<a
+													href="/checkout/{product?.id}"
+													style="justify-content: center;"
+												>
+													<div>Beli</div>
+												</a>
+											</Button>
+										</li>
+									</ul>
+								</nav>
+							</section>
+						{/if}
 					</figcaption>
 				{:else}
 					<div class="image loading"></div>
@@ -422,30 +408,11 @@
 				{/if}
 			</figure>
 		</main>
-		<Footer class="footer white elevation-5">
-			<nav class="nav">
-				<ul>
-					{#each navigation as item}
-						<li>
-							<Button text fab size="small">
-								<a
-									class="grey-text text-darken-3"
-									href="{item.link}"
-									on:click="{item.action}"
-									><Icon path="{item.icon}" />
-									<div>{item.name}</div>
-								</a>
-							</Button>
-						</li>
-					{/each}
-				</ul>
-			</nav>
-			<section class="btn">
-				<a href="/checkout/{product?.id}">
-					<Button outlined>Beli</Button>
-				</a>
-			</section>
-		</Footer>
+		<Footer
+			navigation="{navigation}"
+			desktop="{$is_desktop}"
+			link="/checkout/{product?.id}"
+		/>
 		<Snackbar bind:this="{snackbar}" let:state>
 			{#if state == 'success'}
 				<a class="white-text" href="/cart"><Button text>Lihat</Button></a>

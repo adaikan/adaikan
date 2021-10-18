@@ -10,7 +10,7 @@ export default [
   {
     name: 'Home',
     icon: mdiHome,
-    link: '',
+    link: '/',
   },
   {
     name: 'Pesan',

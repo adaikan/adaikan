@@ -2,6 +2,7 @@
 	import { setContext, onMount } from 'svelte';
 	import { dev } from '$app/env';
 	import { APIS_URL, WS_URL, FETCH_MODE } from '$lib/env';
+	import { mediaQuery, ObserverUnsafe } from '$lib/helper';
 	import Token from '$lib/token';
 	import Api from '$lib/client-api';
 	import BuyerApi from '$apis/buyer';
@@ -11,7 +12,6 @@
 	import StoreApi from '$apis/store';
 	import RatingApi from '$apis/rating';
 	import SelectedItemApi from '$apis/selected-item';
-	import GroupOrderApi from '$apis/group-order';
 	import OrderApi from '$apis/order';
 	import BusinessApi from '$apis/business';
 	import ChatApi from '$apis/chat';
@@ -34,7 +34,6 @@
 	const storeApi = new StoreApi(api, token);
 	const ratingApi = new RatingApi(api, token);
 	const selectedItemApi = new SelectedItemApi(api, token);
-	const groupOrderApi = new GroupOrderApi(api, token);
 	const orderApi = new OrderApi(api, token);
 	const businessApi = new BusinessApi(api, token);
 	const chatApi = new ChatApi(api, token);
@@ -46,17 +45,24 @@
 		store: storeApi,
 		rating: ratingApi,
 		selectedItem: selectedItemApi,
-		// groupOrder: groupOrderApi,
 		order: orderApi,
 		business: businessApi,
 		chat: chatApi,
 	});
+	const is_desktop = new ObserverUnsafe(false);
 </script>
 
 <script>
 	setContext('buyer', buyer);
+	setContext('is_desktop', is_desktop);
 	onMount(() => {
 		buyer.init();
+		mediaQuery('(min-width: 1200px)', (media) => {
+			is_desktop.set(media.matches);
+			media.addEventListener('change', (event) => {
+				is_desktop.set(media.matches);
+			});
+		});
 	});
 </script>
 
@@ -81,7 +87,7 @@
 		transition: background-color ease 250ms;
 		border-radius: 2px;
 		&:hover {
-			background-color: #00796b;
+			background-color: var(--secondary-color);
 		}
 	}
 </style>

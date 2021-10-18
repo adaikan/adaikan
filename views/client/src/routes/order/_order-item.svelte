@@ -178,7 +178,12 @@
 	}
 	.card {
 		@include elevation;
+		border: 2px solid transparent;
 		border-radius: 6px;
+		transition: all 250ms ease;
+		&:hover {
+			border: 2px solid var(--primary-color);
+		}
 	}
 	a {
 		text-decoration: none;

@@ -1,5 +1,5 @@
 <script context="module" lang="ts">
-	import { Icon, Card } from 'svelte-materialify/src';
+	import { Icon, Card, Ripple } from 'svelte-materialify/src';
 	import { mdiImageRemove, mdiImageBrokenVariant } from '@mdi/js';
 
 	import { onMount, onDestroy } from 'svelte';
@@ -16,6 +16,7 @@
 		image?: string;
 		price?: any;
 		store?: string;
+		stock?: number;
 	}
 </script>
 
@@ -32,7 +33,75 @@
 	function release() {}
 </script>
 
-<figure class="card" transition:fade>
+<style lang="scss">
+	@import '../components/skeleton';
+	@import '../components/elevation';
+	.loading {
+		@include loading-sekeleton;
+	}
+	.card {
+		@include elevation;
+		display: grid;
+		border: 2px solid transparent;
+		border-radius: 6px;
+		transition: all 250ms ease;
+		background-color: white;
+		&:hover {
+			border: 2px solid var(--primary-color);
+		}
+		.img {
+			object-fit: cover;
+			object-position: center;
+			width: 100%;
+			aspect-ratio: 1;
+			background-color: #f5f5f5;
+			border-radius: 4px;
+			&.e {
+				display: grid;
+				place-items: center;
+				opacity: 0.7;
+			}
+		}
+		.content {
+			padding: 8px;
+			display: grid;
+			align-content: start;
+			row-gap: 4px;
+			height: 114px;
+		}
+		.name {
+			font-weight: 700;
+		}
+		.price {
+			font-size: 14px;
+			font-weight: 600;
+		}
+		.store {
+			font-size: 14px;
+			font-weight: 400;
+			opacity: 0.7;
+		}
+		.stock {
+			font-size: 14px;
+			font-weight: 500;
+		}
+		.trunc {
+			display: -webkit-box;
+			overflow: hidden;
+			-webkit-box-orient: vertical;
+		}
+		.trunc-1 {
+			@extend .trunc;
+			-webkit-line-clamp: 1;
+		}
+		.trunc-2 {
+			@extend .trunc;
+			-webkit-line-clamp: 2;
+		}
+	}
+</style>
+
+<figure class="card" transition:fade use:Ripple={{}}>
 	{#if data}
 		{#if mode == 'img'}
 			{#if image}
@@ -44,7 +113,8 @@
 					async
 					on:error="{() => {
 						image = undefined;
-					}}" />
+					}}"
+				/>
 			{:else}
 				<div class="img e">
 					<Icon size="{56}" path="{mdiImageRemove}" />
@@ -68,11 +138,16 @@
 			{/if}
 		{/if}
 		<figcaption class="content">
-			<div class="name">{data.name}</div>
-			<div class="store">{data.store}</div>
-			<div class="price">
+			<div class="name trunc-2">{data.name}</div>
+			{#if data.store}
+				<div class="store trunc-1">{data.store}</div>
+			{/if}
+			<div class="price trunc-1">
 				Rp. {Currency.toMoney(data.price)}
 			</div>
+			{#if data.stock}
+				<div class="stock trunc-1">{data.stock} stock</div>
+			{/if}
 		</figcaption>
 	{:else}
 		<div class="img loading">&nbsp;</div>
@@ -83,48 +158,3 @@
 		</figcaption>
 	{/if}
 </figure>
-
-<style lang="scss">
-	@import '../components/skeleton';
-	@import '../components/elevation';
-	.loading {
-		@include loading-sekeleton;
-	}
-	.card {
-		@include elevation;
-		display: grid;
-		border-radius: 4px;
-		.img {
-			object-fit: cover;
-			object-position: center;
-			width: 100%;
-			aspect-ratio: 1;
-			background-color: #f5f5f5;
-			border-radius: 4px;
-			&.e {
-				display: grid;
-				place-items: center;
-				opacity: 0.7;
-			}
-		}
-		.content {
-			padding: 8px;
-			display: grid;
-			row-gap: 4px;
-		}
-		.name {
-			font-size: 16px;
-			font-weight: 500;
-		}
-		.price {
-			font-size: 14px;
-			font-weight: 500;
-			opacity: 0.7;
-		}
-		.store {
-			font-size: 14px;
-			font-weight: 500;
-			opacity: 0.7;
-		}
-	}
-</style>

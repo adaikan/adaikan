@@ -21,6 +21,16 @@ service.route({
 	},
 });
 service.route({
+	url: /wss?:.*/,
+	method: 'GET',
+	handler: async (request, util) => {
+		return {
+			name: 'api',
+			strategy: 'net-only'
+		};
+	},
+});
+service.route({
 	url: new RegExp(location.origin + '/api/' + '.*', 'ig'),
 	method: 'GET',
 	handler: async (request, util) => {

@@ -1,38 +1,28 @@
 <script context="module" lang="ts">
 	import {
 		MaterialAppMin,
-		ProgressLinear,
-		AppBar,
-		Footer,
 		Button,
 		Icon,
-		Menu,
-		NavigationDrawer,
 		Avatar,
 		List,
 		ListGroup,
 		ListItem,
-		ListItemGroup,
 		Card,
-		TextField,
-		Checkbox,
+		Divider,
 	} from 'svelte-materialify/src';
 	import UserUnauthDialog from '$components/user-unauth-dialog.svelte';
 	import DeleteAccountDialog from '$components/delete-account-dialog.svelte';
 	import Snackbar from '$components/snackbar.svelte';
 	import RegisterSeller from './_register-seller.svelte';
 	import LoginSeller from './_login-seller.svelte';
+	import ProgressLinear from '$components/progress-linear.svelte';
+	import Appbar from '../_appbar.svelte';
 	import {
 		mdiAccountOutline,
 		mdiClipboardListOutline,
 		mdiBellOutline,
 		mdiTagOutline,
 		mdiLogout,
-		mdiAccountCircle,
-		mdiMapMarkerRadiusOutline,
-		mdiCheck,
-		mdiEyeOff,
-		mdiEye,
 		mdiDeleteOutline,
 		mdiChevronLeft,
 		mdiChevronRight,
@@ -49,18 +39,16 @@
 	import { APIS_URL, FETCH_MODE } from '$lib/env';
 	import { SellerClientApi } from '$lib/seller';
 
+	import type { ObserverUnsafe } from '$lib/helper';
 	import type { BuyerClient } from '../__layout.svelte';
-
-	let theme = writable<'light' | 'dark'>('light');
-	let showProgress = writable(true);
-	let progress = writable(0);
-	let indeterminate = writable(true);
 </script>
 
 <script lang="ts">
 	const buyer = getContext<BuyerClient>('buyer');
+	const is_desktop = getContext<ObserverUnsafe<boolean>>('is_desktop');
 	const profile = writable(buyer.get());
 	let address: BuyerClient.Address | null;
+	let progress: ProgressLinear;
 	let snackbar: Snackbar;
 	const menu = [
 		{
@@ -106,13 +94,14 @@
 					async action() {
 						const api = new SellerClientApi({
 							base: APIS_URL,
+							wsbase: '',
 							debug: dev,
 							mode: FETCH_MODE,
 							role: 'seller',
 							version: 'v0-alpha.1',
 						});
 						try {
-							loading();
+							progress.loading();
 							const token = await api.init().seller.token.retrieve();
 							let user: BuyerClient.Seller | null;
 							if (token) {
@@ -139,7 +128,7 @@
 								});
 								loginSeller.$on('submit', async (event) => {
 									try {
-										loading();
+										progress.loading();
 										loginSeller.resetMessage();
 										await api.seller.login({
 											username: event.detail.username,
@@ -164,7 +153,7 @@
 											},
 										});
 									} finally {
-										loaded();
+										progress.loaded();
 									}
 								});
 							} else {
@@ -177,7 +166,7 @@
 								});
 								registerSeller.$on('submit', async (event) => {
 									try {
-										loading();
+										progress.loading();
 										await api.seller.register({
 											email: event.detail.email,
 											username: event.detail.username,
@@ -202,7 +191,7 @@
 											},
 										});
 									} finally {
-										loaded();
+										progress.loaded();
 									}
 								});
 							}
@@ -210,7 +199,7 @@
 							snackbar.setText(error.message);
 							snackbar.show();
 						} finally {
-							loaded();
+							progress.loaded();
 						}
 					},
 				},
@@ -222,7 +211,7 @@
 			icon: mdiLogout,
 			sub: [],
 			async action() {
-				loading();
+				progress.loading();
 				await buyer.logout();
 				await goto('/', { replaceState: true });
 			},
@@ -241,6 +230,9 @@
 	let showUserUnauthDialog = false;
 	let registerSeller: RegisterSeller;
 	let loginSeller: LoginSeller;
+
+	$: loading = progress?.active;
+
 	onMount(init);
 	onDestroy(release);
 	async function init() {
@@ -251,9 +243,11 @@
 				buyer.set($profile);
 			}
 			imageUrl = $profile.image ?? '';
-			address = await buyer.api.address.search({where: {
-				selected: true,
-			}});
+			address = await buyer.api.address.search({
+				where: {
+					selected: true,
+				},
+			});
 		} catch (error: any) {
 			console.error(error);
 			switch (error.type) {
@@ -265,16 +259,10 @@
 					break;
 			}
 		} finally {
-			loaded();
+			progress.loaded();
 		}
 	}
 	async function release() {}
-	function loading() {
-		$showProgress = true;
-	}
-	function loaded() {
-		$showProgress = false;
-	}
 	function navigate(
 		href: string,
 		opts?:
@@ -286,110 +274,15 @@
 			  }
 			| undefined
 	) {
-		loading();
+		progress.loading();
 		return goto(href, opts);
 	}
 	async function unregister() {
-		loading();
+		progress.loading();
 		await buyer.logout();
 		goto('/');
 	}
 </script>
-
-<svelte:head>
-	<title>Akun</title>
-	<meta name="" content="" />
-</svelte:head>
-
-<div transition:slide>
-	<MaterialAppMin theme="{$theme}">
-		<ProgressLinear
-			bind:active="{$showProgress}"
-			bind:indeterminate="{$indeterminate}"
-			bind:value="{$progress}"
-			backgroundColor="secondary-color"
-			color="secondary-color" />
-		<AppBar class="primary-color {$showProgress ? 'top-4' : ''}">
-			<span slot="icon">
-				<Button fab icon text size="small" on:click="{() => history.back()}">
-					<Icon path="{mdiChevronLeft}" />
-				</Button>
-			</span>
-			<span slot="title">Akun</span>
-		</AppBar>
-		<main class="main">
-			{#if $profile}
-				<Card tile>
-					<div class="profile">
-						{#if imageUrl}
-							<img class="thumb" src="{imageUrl}" alt="" />
-						{:else}
-							<Avatar class="thumb">
-								<Icon path="{mdiAccountCircleOutline}" />
-							</Avatar>
-						{/if}
-						<div class="text">
-							<div class="t-2">{$profile.name ?? '-'}</div>
-							<div class="t-3">{address?.place || '-'}</div>
-							<div class="t-3">{$profile.telp ?? '-'}</div>
-						</div>
-					</div>
-				</Card>
-			{:else}
-				<Card tile>
-					<div class="profile">
-						<div class="thumb loading">&nbsp;</div>
-						<div class="text">
-							<div class="t-2 loading">&nbsp;</div>
-							<div class="t-3 loading">&nbsp;</div>
-							<div class="t-3 loading">&nbsp;</div>
-						</div>
-					</div>
-				</Card>
-			{/if}
-			<section class="menu">
-				<List>
-					{#each menu as item}
-						{#if item.sub.length}
-							<ListGroup
-								active="{false}"
-								offset="{72}"
-								on:click="{item.action}">
-								<span slot="prepend">
-									<Icon path="{item.icon}" />
-								</span>
-								<span slot="activator">{item.name}</span>
-								{#each item.sub as sub}
-									<ListItem on:click="{sub.action}">{sub.name}</ListItem>
-								{/each}
-								<span slot="append">
-									<Icon path="{mdiChevronRight}" />
-								</span>
-							</ListGroup>
-						{:else}
-							<ListItem
-								active="{false}"
-								activeClass=""
-								on:click="{item.action}">
-								<span slot="prepend">
-									<Icon path="{item.icon}" />
-								</span>
-								<span>{item.name}</span>
-							</ListItem>
-						{/if}
-					{/each}
-				</List>
-			</section>
-		</main>
-		<Snackbar bind:this="{snackbar}" />
-		<RegisterSeller bind:this="{registerSeller}" />
-		<LoginSeller bind:this="{loginSeller}" />
-		<DeleteAccountDialog
-			bind:active="{showDeleteAccountDialog}"
-			on:granted="{unregister}" />
-		<UserUnauthDialog bind:active="{showUserUnauthDialog}" />
-	</MaterialAppMin>
-</div>
 
 <style lang="scss">
 	@import '../../components/common';
@@ -452,7 +345,6 @@
 	* :global {
 		@include common-app;
 		@include common-loader;
-		@include common-appbar;
 		@include common-footer;
 		.thumb {
 			width: 100%;
@@ -461,3 +353,101 @@
 		}
 	}
 </style>
+
+<svelte:head>
+	<title>Akun</title>
+	<meta name="" content="" />
+</svelte:head>
+
+<div transition:slide>
+	<MaterialAppMin>
+		<ProgressLinear
+			bind:this="{progress}"
+			backgroundColor="secondary-color"
+			color="secondary-color"
+		/>
+		<Appbar
+			loading="{$loading}"
+			desktop="{$is_desktop}"
+			title="{$is_desktop ? '' : 'Akun'}"
+			back_nav
+		/>
+		<main class="main">
+			{#if $profile}
+				<Card>
+					<div class="profile">
+						{#if imageUrl}
+							<img class="thumb" src="{imageUrl}" alt="" />
+						{:else}
+							<Avatar class="thumb">
+								<Icon path="{mdiAccountCircleOutline}" />
+							</Avatar>
+						{/if}
+						<div class="text">
+							<div class="t-2">{$profile.name ?? '-'}</div>
+							<div class="t-3">{address?.place || '-'}</div>
+							<div class="t-3">{$profile.telp ?? '-'}</div>
+						</div>
+					</div>
+				</Card>
+			{:else}
+				<Card>
+					<div class="profile">
+						<div class="thumb loading">&nbsp;</div>
+						<div class="text">
+							<div class="t-2 loading">&nbsp;</div>
+							<div class="t-3 loading">&nbsp;</div>
+							<div class="t-3 loading">&nbsp;</div>
+						</div>
+					</div>
+				</Card>
+			{/if}
+			<section class="menu">
+				<List>
+					{#each menu as item, index}
+						{#if index}
+							<Divider />
+						{/if}
+						{#if item.sub.length}
+							<ListGroup
+								active="{false}"
+								offset="{72}"
+								on:click="{item.action}"
+							>
+								<span slot="prepend">
+									<Icon path="{item.icon}" />
+								</span>
+								<span slot="activator">{item.name}</span>
+								{#each item.sub as sub}
+									<ListItem on:click="{sub.action}">{sub.name}</ListItem>
+								{/each}
+								<span slot="append">
+									<Icon path="{mdiChevronRight}" />
+								</span>
+							</ListGroup>
+						{:else}
+							<ListItem
+								active="{false}"
+								activeClass=""
+								on:click="{item.action}"
+							>
+								<span slot="prepend">
+									<Icon path="{item.icon}" />
+								</span>
+								<span>{item.name}</span>
+							</ListItem>
+						{/if}
+					{/each}
+				</List>
+			</section>
+		</main>
+		<Snackbar bind:this="{snackbar}" />
+		<RegisterSeller bind:this="{registerSeller}" />
+		<LoginSeller bind:this="{loginSeller}" />
+		<DeleteAccountDialog
+			bind:active="{showDeleteAccountDialog}"
+			on:granted="{unregister}"
+		/>
+		<UserUnauthDialog bind:active="{showUserUnauthDialog}" />
+	</MaterialAppMin>
+</div>

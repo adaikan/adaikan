@@ -5,15 +5,17 @@ import {
 
 export default [
   {
-    name: 'Chat',
+    name: 'Pesan',
+    short: 'Pesan',
     desc: 'Chat with Seller',
     icon: mdiMessageTextOutline,
     link: '/chat',
   },
   {
-    name: 'Cart',
+    name: 'Troli',
+    short: 'Tambah ke Troli',
     desc: 'Add to Cart',
     icon: mdiCartPlus,
     link: '/cart',
   },
-] as { name: string; desc: string; icon: string; link: string; action?: (event: Event) => void }[];
+] as { name: string; short: string; desc: string; icon: string; link: string; action?: (event: Event) => void }[];

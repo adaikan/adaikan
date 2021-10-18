@@ -209,7 +209,7 @@
 		width: stretch;
 		height: stretch;
 		display: grid;
-		grid-template-columns: min-content 2fr 2fr;
+		grid-template-columns: min-content auto;
 		grid-auto-flow: column;
 		align-items: center;
 		column-gap: 8px;

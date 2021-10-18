@@ -135,7 +135,7 @@
 						<Icon class="grey-text text-darken-4" path="{mdiMagnify}" />
 					</Button>
 				</TextField>
-				<Select dense items="{filter}" bind:value="{filterText}">Status</Select>
+				<Select dense outlined items="{filter}" bind:value="{filterText}">Status</Select>
 			</section>
 			{#each fakeOrder as value}
 				<OrderCard />

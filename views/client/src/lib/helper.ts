@@ -331,17 +331,63 @@ export function mediaQuery(query: string, handler: (media: MediaQueryList) => vo
 	});
 }
 export class Diff {
-	static array() {}
+	static array<A extends Array<any>, R = A>(imutable: A, mutable: A): R | undefined {
+		const result: R = [] as unknown as R;
+		for (const [key, i_value] of Object.entries(imutable)) {
+			let m_value = mutable[key] as any;
+			if (typeof i_value == typeof m_value) {
+				if (typeof i_value == 'object') {
+					let temp: any = undefined;
+					if (Array.isArray(i_value) && Array.isArray(m_value)) {
+						temp = Diff.array(imutable[key], mutable[key]);
+					} else if (i_value != null && m_value != null) {
+						temp = Diff.object(imutable[key], mutable[key]);
+					}
+					if (temp == undefined) {
+						continue;
+					} else {
+						m_value = temp;
+					}
+				}
+				if (i_value != m_value) {
+					result[key] = m_value;
+				}
+			} else {
+				result[key] = m_value;
+			}
+		}
+		if ((result as any).length) {
+			return result;
+		} else {
+			return undefined;
+		}
+	}
 	static object<O extends object, R = { [P in keyof O]?: O[P] }>(
 		imutable: O,
 		mutable: O
 	): R | undefined {
 		const result: R = {} as unknown as R;
-		for (const [key, value] of Object.entries(imutable)) {
-			if (typeof mutable[key as unknown as keyof O] != 'object') {
-				if (mutable[key as unknown as keyof O] != value) {
-					result[key as unknown as keyof R] = mutable[key as unknown as keyof O] as any;
+		for (const [key, i_value] of Object.entries(imutable)) {
+			let m_value = mutable[key as unknown as keyof O] as any;
+			if (typeof i_value == typeof m_value) {
+				if (typeof i_value == 'object') {
+					let temp: any = undefined;
+					if (Array.isArray(i_value) && Array.isArray(m_value)) {
+						temp = Diff.array(imutable[key], mutable[key]);
+					} else if (i_value != null && m_value != null) {
+						temp = Diff.object(imutable[key], mutable[key]);
+					}
+					if (temp == undefined) {
+						continue;
+					} else {
+						m_value = temp;
+					}
 				}
+				if (i_value != m_value) {
+					result[key as unknown as keyof R] = m_value;
+				}
+			} else {
+				result[key as unknown as keyof R] = m_value;
 			}
 		}
 		if (Object.keys(result).length) {

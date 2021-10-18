@@ -1,70 +1,79 @@
 <script context="module" lang="ts">
-	import { onMount, getContext } from 'svelte';
-	import { slide, scale } from 'svelte/transition';
+	import { onMount, onDestroy, getContext } from 'svelte';
+	import { fade, scale } from 'svelte/transition';
 
-	import SideBar from '../_side-bar.svelte';
-	import AppBar from '../_app-bar.svelte';
-	import Main from '../_main.svelte';
-	import Footer from '../_footer.svelte';
+	import Page from '$components/page.svelte';
+	import Appbar from '$components/appbar.svelte';
+	import Drawer, { slide } from '$components/drawer.svelte';
+	import Content from '$components/content.svelte';
+	import Main from '$components/main.svelte';
+	import Footer from '$components/footer.svelte';
 	import Progress from '$components/progress.svelte';
+	import AppbarContent from '../dashboard/_appbar.svelte';
+	import DrawerContent from '../dashboard/_drawer.svelte';
+	import FooterContent from '../dashboard/_footer.svelte';
 
-	import { Diff } from '$lib/helper';
-	import { page } from '$app/stores';
 	import { base } from '$app/paths';
 	import { goto } from '$app/navigation';
 
 	import type { ClientApi, User } from '../__layout.svelte';
 
 	const title = 'Chat';
-	const desc = 'Chat';
+	const desc = '';
 </script>
 
 <script lang="ts">
 	const client = getContext<ClientApi>('clientApi');
 	const user = getContext<User>('user');
 
-	let loader: Progress;
-	let messagesContainer: HTMLElement;
-	let mode: 'light' | 'dark' = 'dark';
-	let profile = { image: '', name: '', role: '' };
+	let mode = 'dark';
+	let drawerOpened = true;
+	let account = { image: '', name: '', role: '' };
+	let user_login = $user;
+	let progress: Progress;
+
+	let messages_container: HTMLElement;
 	let channels: ClientApi.Chat.Channel[] = [];
-	let selectedChannel = 0;
-	let selectedChannelIndex = -1;
+	let selected_channel_id = 0;
+	let selected_channel_index = -1;
 	let text = '';
 	let image = '';
-	let unsubscribers: Function[] = [];
 	let disable = true;
 
-	$: selectedChannel && messagesContainer && scrollBottom();
+	$: selected_channel_id && messages_container && scrollBottom();
 
-	onMount(async () => {
+	onMount(init);
+	onDestroy(release);
+
+	async function init() {
 		try {
 			await client.ready;
-			if (!$user) {
-				return goto('/');
+
+			if (!user_login) {
+				return goto(base + '/');
 			}
-			channels = await client.chat.getChannels({ nodeId: $user.chatNodeId });
+			account = {
+				image: user_login.image ?? '',
+				name: user_login.username,
+				role: user_login.role
+			};
+			channels = await client.chat.getChannels({ nodeId: user_login.chatNodeId });
 
-			const ws = client.chat.ws();
-
-			ws.connect({ id: $user.chatNodeId, channel: channels });
-
-			unsubscribers.push(
-				await ws.onJoin((channel) => {
-					channels.push(channel);
+			const ws = await client.chat.ws_v2.open();
+			ws.send({ tag: 'connect', data: { id: user_login.chatNodeId, channel: channels } })
+				.message('join', (data) => {
+					channels.push(data);
 					channels = channels;
 				})
-			);
-			unsubscribers.push(
-				await ws.onMessage((message) => {
-					channels.find((channel) => channel.id == message.channelId)?.message.push(message);
+				.message('message', (data) => {
+					channels.find((channel) => channel.id == data.channelId)?.message.push(data);
 					channels = channels;
 					if (document.visibilityState == 'hidden' && Notification.permission == 'granted') {
-						const notification = new Notification(message.sentBy.name, {
-							body: message.text,
-							badge: message.sentBy.image,
-							icon: message.sentBy.image,
-							tag: message.channelId + '',
+						const notification = new Notification(data.sentBy.name, {
+							body: data.text,
+							badge: data.sentBy.image,
+							icon: data.sentBy.image,
+							tag: data.channelId + '',
 							renotify: true
 						});
 						notification.addEventListener('click', (event) => {
@@ -72,54 +81,51 @@
 						});
 					}
 					setTimeout(scrollBottom);
-				})
-			);
-			unsubscribers.push(
-				await ws.onClose(() => {
-					goto(base + '/');
-				})
-			);
+				});
 
-			profile = {
-				image: $user?.image as any,
-				name: $user?.username as any,
-				role: $user?.role as any
-			};
+			disable = false;
 			Notification.requestPermission();
 		} catch (error: any) {
 			console.error(error);
 		} finally {
-			disable = false;
-			loader.hiding();
+			progress.hiding();
 		}
-	});
-
+	}
+	async function release() {
+		try {
+			client.chat.ws_v2.close();
+		} catch (error: any) {
+			console.error(error);
+		} finally {
+		}
+	}
 	async function send() {
 		try {
-			loader.showing();
+			progress.showing();
 			disable = true;
-			if (!$user) {
+			if (!user_login) {
 				throw new Error();
 			}
 			await client.chat.message({
 				data: {
 					sentAt: new Date(),
 					text,
-					channelId: selectedChannel,
-					sentById: $user.chatNodeId
+					channelId: selected_channel_id,
+					sentById: user_login.chatNodeId
 				}
 			});
 			text = '';
 		} catch (error: any) {
+			console.error(error);
 		} finally {
 			disable = false;
-			loader.hiding();
+			progress.hiding();
 		}
 	}
 	function scrollBottom() {
-		messagesContainer.scrollTo({
+		messages_container.scrollTo({
 			behavior: 'smooth',
-			top: messagesContainer.scrollHeight
+			top: messages_container.scrollHeight
 		});
 	}
 </script>
@@ -129,118 +135,132 @@
 	<meta name="description" content={desc} />
 </svelte:head>
 
-<section
-	transition:slide
-	data-theme={mode}
-	class="{mode} grid grid-flow-col grid-cols-[2.5fr,9.5fr] bg-base-100 text-base-content"
->
-	<SideBar />
-	<section class="flex flex-col h-screen overflow-y-auto">
-		<AppBar bind:mode account={profile} />
-		<Progress bind:this={loader} />
-		<Main class="flex-grow flex flex-col gap-6 overflow-y-auto">
-			<section>
-				<div class="text-3xl text-base-content font-bold">{title}</div>
-			</section>
-			<section class="chatlayout flex-grow">
-				<aside class="chatnode">
-					<ul class="list">
-						{#each channels as channel, index}
-							{#if index}
-								<hr class="h-[1px] border-0 bg-white/10" />
-							{/if}
-							<li
-								on:click={() => {
-									selectedChannelIndex = index;
-									selectedChannel = channel.id;
-								}}
-								class="item {channel.id == selectedChannel ? 'active' : ''}"
-							>
-								<img src={channel.image} alt="" />
-								<div>{channel.name}</div>
-							</li>
-						{/each}
-					</ul>
-				</aside>
-				<section class="chatbox">
-					{#if channels[selectedChannelIndex]}
-						<section class="topbar">
-							<img src={channels[selectedChannelIndex].image} alt="" />
-							<div class="text-base">{channels[selectedChannelIndex].name}</div>
-						</section>
-						<hr class="h-[1px] border-0 bg-white/10" />
-						<section bind:this={messagesContainer} class="messages">
-							{#each channels[selectedChannelIndex].message as message}
-								<div
-									transition:scale
-									class="message {message.sentBy.id == $user?.chatNodeId ? 'mymessage' : ''}"
-								>
-									<div class="info">
-										<div class="">{message.sentBy.name}</div>
-										<div class="flex-grow" />
-										<div class="">{new Date(message.sentAt).toLocaleString()}</div>
-										<div class="">
+<Page {mode} class="text-gray-900 bg-gray-50 dark:text-gray-50 dark:bg-gray-900">
+	<section transition:fade class="flex">
+		<Drawer show={drawerOpened} class="bg-base-100">
+			<DrawerContent />
+		</Drawer>
+		<Content class="flex-grow h-screen overflow-y-auto">
+			<Appbar class="bg-base-100">
+				<AppbarContent bind:account bind:mode bind:drawerOpened />
+			</Appbar>
+			<Progress bind:this={progress} />
+			<Main class="flex-grow overflow-y-auto">
+				<section>
+					<div class="text-2xl font-bold">{title}</div>
+				</section>
+				<section class="chatlayout flex-grow">
+					<aside class="chatnode">
+						<ul class="list">
+							{#each channels as channel, index}
+								{#if index}
+									<hr class="h-[1px] border-0 opacity-10 bg-black dark:bg-white" />
+								{/if}
+								<li>
+									<button
+										on:click={() => {
+											selected_channel_index = index;
+											selected_channel_id = channel.id;
+										}}
+										class="item {channel.id == selected_channel_id ? 'active' : ''}"
+									>
+										<img src={channel.image} alt="" />
+										<div>{channel.name}</div>
+									</button>
+								</li>
+							{/each}
+						</ul>
+					</aside>
+					<section class="chatbox">
+						{#if channels[selected_channel_index]}
+							<section class="topbar">
+								<img src={channels[selected_channel_index].image} alt="" />
+								<div class="text-base">{channels[selected_channel_index].name}</div>
+							</section>
+							<hr class="h-[1px] border-0 opacity-10 bg-black dark:bg-white" />
+							<section bind:this={messages_container} class="messages">
+								{#each channels[selected_channel_index].message as message}
+									<div
+										transition:scale
+										class="message {message.sentBy.id == $user?.chatNodeId ? 'mymessage' : ''}"
+									>
+										<div class="info">
+											<div class="">{message.sentBy.name}</div>
+											<div class="flex-grow" />
+											<div class="">{new Date(message.sentAt).toLocaleString()}</div>
+											<div class="">
+												<button
+													disabled={disable}
+													class="btn btn-ghost btn-xs btn-square {disable ? 'btn-disabled' : ''}"
+												>
+													<svg
+														class="w-4 h-4"
+														fill="none"
+														stroke="currentColor"
+														viewBox="0 0 24 24"
+														xmlns="http://www.w3.org/2000/svg"
+														><path
+															stroke-linecap="round"
+															stroke-linejoin="round"
+															stroke-width="2"
+															d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z"
+														/></svg
+													>
+												</button>
+											</div>
+										</div>
+										<hr class="h-[1px] border-0 opacity-10 bg-black dark:bg-white" />
+										<div class="content">{message.text}</div>
+									</div>
+								{/each}
+							</section>
+							<hr class="h-[1px] border-0 opacity-10 bg-black dark:bg-white" />
+							<form autocomplete="off" on:submit|preventDefault={send} class="bottombar">
+								<div class="form-control">
+									<label class="relative w-full">
+										<input
+											bind:value={text}
+											type="text"
+											placeholder="Write message..."
+											disabled={disable}
+											class="input input-md w-full rounded-md {disable
+												? 'input-disabled'
+												: 'input-primary'}"
+										/>
+										<div
+											class="absolute top-0 right-0 grid place-content-center h-full"
+											style="aspect-ratio: 1;"
+										>
 											<button
+												type="submit"
 												disabled={disable}
-												class="btn btn-ghost btn-xs btn-square {disable ? 'btn-disabled' : ''}"
+												class="btn btn-sm btn-square btn-ghost {disable
+													? 'btn-disabled'
+													: 'hover:bg-base-100'}"
 											>
 												<svg
-													class="w-4 h-4"
-													fill="none"
-													stroke="currentColor"
-													viewBox="0 0 24 24"
 													xmlns="http://www.w3.org/2000/svg"
+													viewBox="0 0 24 24"
+													class="w-6 h-6 fill-current"
 													><path
-														stroke-linecap="round"
-														stroke-linejoin="round"
-														stroke-width="2"
-														d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z"
+														d="M20.34,9.32l-14-7a3,3,0,0,0-4.08,3.9l2.4,5.37h0a1.06,1.06,0,0,1,0,.82l-2.4,5.37A3,3,0,0,0,5,22a3.14,3.14,0,0,0,1.35-.32l14-7a3,3,0,0,0,0-5.36Zm-.89,3.57-14,7a1,1,0,0,1-1.35-1.3l2.39-5.37A2,2,0,0,0,6.57,13h6.89a1,1,0,0,0,0-2H6.57a2,2,0,0,0-.08-.22L4.1,5.41a1,1,0,0,1,1.35-1.3l14,7a1,1,0,0,1,0,1.78Z"
 													/></svg
 												>
 											</button>
 										</div>
-									</div>
-									<hr class="h-[1px] border-0 bg-white/20" />
-									<div class="content">{message.text}</div>
-									<!-- <div class="bottombar">20/04/2021</div> -->
+									</label>
 								</div>
-							{/each}
-						</section>
-						<hr class="h-[1px] border-0 bg-white/10" />
-						<form on:submit|preventDefault={send} class="bottombar">
-							<div class="form-control">
-								<label class="relative w-full">
-									<input
-										bind:value={text}
-										type="text"
-										placeholder="Write message..."
-										class="input input-md input-primary w-full rounded-md"
-									/>
-									<div
-										class="absolute top-0 right-0 grid place-content-center h-full"
-										style="aspect-ratio: 1;"
-									>
-										<button type="submit" class="btn btn-sm btn-square btn-ghost hover:bg-base-200">
-											<svg
-												xmlns="http://www.w3.org/2000/svg"
-												viewBox="0 0 24 24"
-												class="w-6 h-6 fill-current"
-												><path
-													d="M20.34,9.32l-14-7a3,3,0,0,0-4.08,3.9l2.4,5.37h0a1.06,1.06,0,0,1,0,.82l-2.4,5.37A3,3,0,0,0,5,22a3.14,3.14,0,0,0,1.35-.32l14-7a3,3,0,0,0,0-5.36Zm-.89,3.57-14,7a1,1,0,0,1-1.35-1.3l2.39-5.37A2,2,0,0,0,6.57,13h6.89a1,1,0,0,0,0-2H6.57a2,2,0,0,0-.08-.22L4.1,5.41a1,1,0,0,1,1.35-1.3l14,7a1,1,0,0,1,0,1.78Z"
-												/></svg
-											>
-										</button>
-									</div>
-								</label>
-							</div>
-						</form>
-					{/if}
+							</form>
+						{/if}
+					</section>
 				</section>
-			</section>
-		</Main>
-		<Footer />
+			</Main>
+			<Footer class="bg-base-100 justify-center">
+				<FooterContent />
+			</Footer>
+		</Content>
 	</section>
-</section>
+</Page>
 
 <style lang="scss">
 	.chatlayout {
@@ -250,20 +270,21 @@
 		gap: 16px;
 	}
 	.chatnode {
-		@apply bg-base-200;
+		@apply bg-base-100;
 		@apply rounded-md;
 		padding: 4px 0;
 		.list {
 			display: grid;
 		}
 		.item {
+			width: stretch;
 			padding: 8px 16px;
 			display: flex;
 			gap: 8px;
 			align-items: center;
 			border-radius: 2px;
 			&:hover {
-				@apply bg-base-300;
+				@apply bg-base-200;
 			}
 			img {
 				height: 32px;
@@ -279,7 +300,7 @@
 		overflow-y: auto;
 		display: grid;
 		grid-template-rows: max-content 1px auto 1px max-content;
-		@apply bg-base-200;
+		@apply bg-base-100;
 		@apply rounded-md;
 		.topbar {
 			padding: 12px 18px;
@@ -300,16 +321,16 @@
 			gap: 16px;
 			scroll-behavior: smooth;
 			.message {
-				@apply bg-base-300;
+				@apply bg-base-200;
 				width: fit-content;
 				max-width: 80%;
-				border-radius: 12px 12px 12px 4px;
+				border-radius: 8px 8px 8px 2px;
 				overflow-wrap: anywhere;
 			}
 			.mymessage {
 				@apply bg-primary;
 				justify-self: end;
-				border-radius: 12px 12px 4px 12px;
+				border-radius: 8px 8px 2px 8px;
 			}
 			.info {
 				@apply text-sm;
@@ -322,9 +343,7 @@
 			}
 			.content {
 				@apply text-base;
-				padding: 6px 8px;
-			}
-			.bottombar {
+				padding: 8px 12px;
 			}
 		}
 		.bottombar {

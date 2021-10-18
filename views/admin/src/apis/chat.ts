@@ -101,6 +101,9 @@ export default class ChatClientApi {
 	public ws() {
 		return new WSChat(this.api.ws());
 	}
+	public get ws_v2() {
+		return this.api.ws({persist: true});
+	}
 }
 
 class WSChat {
@@ -115,7 +118,7 @@ class WSChat {
 		this.clientWS = WSChat.clientWS;
 	}
 	public async connect(node: { id: number; channel: Channel[] }) {
-		await this.clientWS.open;
+		await this.clientWS.opened;
 
 		this.clientWS.send(
 			this.serialize<ChatSendFormat>({
@@ -132,7 +135,7 @@ class WSChat {
 			}
 		) => any
 	) {
-		await this.clientWS.open;
+		await this.clientWS.opened;
 		const listener = (event: MessageEvent) => {
 			const message = this.deserialize<ChatReceiveFormat>(event.data);
 			if (message.tag == 'message') {
@@ -144,7 +147,7 @@ class WSChat {
 		return () => this.clientWS.removeEventListener('message', listener);
 	}
 	public async onJoin(handler: (channel: Channel) => any) {
-		await this.clientWS.open;
+		await this.clientWS.opened;
 		const listener = (event: MessageEvent) => {
 			const message = this.deserialize<ChatReceiveFormat<Channel>>(event.data);
 			if (message.tag == 'join') {
@@ -156,7 +159,7 @@ class WSChat {
 		return () => this.clientWS.removeEventListener('message', listener);
 	}
 	public async onClose(handler: (code: number, reason: string) => any) {
-		await this.clientWS.open;
+		await this.clientWS.opened;
 		const listener = (event: CloseEvent) => {
 			handler(event.code, event.reason);
 		};

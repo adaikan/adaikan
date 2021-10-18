@@ -3,42 +3,47 @@
 	import {
 		MaterialAppMin,
 		AppBar,
-		Footer,
 		Button,
 		Icon,
 		TextField,
+		Select,
 	} from 'svelte-materialify/src';
 	import ProgressLinear from '$components/progress-linear.svelte';
 	import Alert from '$components/alert.svelte';
-	import {
-		mdiEye,
-		mdiEyeOff,
-		mdiCheck,
-		mdiChevronLeft,
-		mdiChevronRight,
-		mdiStarOutline,
-		mdiStar,
-	} from '@mdi/js';
+	import { mdiEye, mdiEyeOff, mdiChevronLeft } from '@mdi/js';
 
 	import { onMount, onDestroy, getContext } from 'svelte';
-	import { writable } from 'svelte/store';
 	import { fade } from 'svelte/transition';
-	import { getStores, navigating, page, session } from '$app/stores';
 	import { goto } from '$app/navigation';
 
 	import type { Context } from './__layout.svelte';
-	import type { BuyerClient } from '../__layout.svelte';
+	import type { ObserverUnsafe } from '$lib/helper';
 </script>
 
 <script lang="ts">
-	const { buyer } = getContext<Context>('layout');
-	const user = getContext<BuyerClient>('buyer');
+	const user = getContext<Context>('layout');
+	const is_desktop = getContext<ObserverUnsafe<boolean>>('is_desktop');
 	let alert: Alert;
 	let loader: ProgressLinear;
 	let username = '';
 	let password = '';
+	let role = '';
 	let showPassword = false;
 	let disableSubmit = false;
+	let as = [
+		{
+			name: 'Pembeli',
+			value: 'buyer',
+		},
+		{
+			name: 'Penjual',
+			value: 'seller',
+		},
+		{
+			name: 'Kurir',
+			value: 'courier',
+		},
+	];
 
 	onMount(init);
 	onDestroy(release);
@@ -52,16 +57,28 @@
 			loader.loading();
 			alert.hide();
 			disableSubmit = true;
-			const data = await buyer.login({
-				username,
-				password,
-			});
-			user.set(data);
+			if (role == 'buyer') {
+				await user.buyer.login({
+					username,
+					password,
+				});
+				role = '';
+			} else if (role == 'seller') {
+				await user.seller.login({
+					username,
+					password,
+				});
+			} else if (role == 'courier') {
+				await user.courier.login({
+					username,
+					password,
+				});
+			}
 			alert.setState('success');
 			alert.setText('Berhasil Masuk');
 			alert.show();
 			await loader.sequencing();
-			goto('/', { replaceState: true });
+			goto('/' + role, { replaceState: true });
 		} catch (error: any) {
 			alert.setState('error');
 			alert.setText(error.message);
@@ -72,96 +89,20 @@
 	}
 </script>
 
-<svelte:head>
-	<title>Masuk</title>
-	<meta name="" content="" />
-</svelte:head>
-
-<div transition:fade class="primary-color">
-	<MaterialAppMin>
-		<ProgressLinear bind:this="{loader}" />
-		<AppBar class="transparent" tile flat>
-			<span slot="icon">
-				<Button fab icon text size="small" on:click="{() => history.back()}">
-					<Icon path="{mdiChevronLeft}" />
-				</Button>
-			</span>
-		</AppBar>
-		<main>
-			<form on:submit|preventDefault="{submit}">
-				<fieldset>
-					<legend>
-						<img
-							class="logo"
-							src="{logo}"
-							alt="ada ikan"
-							width="64"
-							height="64" />
-						<span>Masuk</span>
-					</legend>
-					<div class="w-full">
-						<Alert bind:this="{alert}" />
-					</div>
-					<div class="content">
-						<TextField
-							bind:value="{username}"
-							class="textfield"
-							placeholder="Username"
-							flat
-							solo
-							autocomplete="username"
-							required />
-						<div>
-							<TextField
-								class="textfield"
-								bind:value="{password}"
-								placeholder="Password"
-								flat
-								solo
-								type="{showPassword ? 'text' : 'password'}"
-								autocomplete="current-password"
-								required>
-								<div slot="append">
-									<Button
-										fab
-										icon
-										text
-										size="small"
-										on:click="{() => {
-											showPassword = !showPassword;
-										}}">
-										<Icon
-											class="grey-text text-darken-3"
-											path="{showPassword ? mdiEyeOff : mdiEye}" />
-									</Button>
-								</div>
-							</TextField>
-							<div class="t-end f-14">
-								<a class="white-text" href="/entry/reset">Lupa Password?</a>
-							</div>
-						</div>
-					</div>
-					<div class="btns">
-						<Button depressed type="submit" disabled={disableSubmit}>Masuk</Button>
-						<div class="t-center f-14">
-							<a class="white-text" href="/courier/entry/login">Masuk Kurir?</a>
-						</div>
-					</div>
-				</fieldset>
-			</form>
-		</main>
-	</MaterialAppMin>
-</div>
-
 <style lang="scss">
 	@import '../../components/common';
+	@import '../../components/elevation';
+	.card {
+		@include elevation;
+		border-radius: 6px;
+		background-color: white;
+	}
 	main {
 		max-width: 100vw;
 		min-height: 100vh;
 		padding: 32px;
 		display: grid;
 	}
-
 	form {
 		margin: auto;
 		width: 100%;
@@ -170,51 +111,53 @@
 		display: grid;
 		place-items: center;
 		row-gap: 32px;
+		transition: all 250ms ease;
 		@include medium-up {
-			width: 500px;
+			width: 420px;
 		}
 	}
-
 	fieldset {
 		display: contents;
 	}
-
-	legend {
+	.title {
 		display: grid;
 		place-items: center;
-		row-gap: 16px;
+		gap: 8px;
 		font-weight: 600;
 	}
-
 	.content {
 		width: 100%;
 		display: grid;
 		row-gap: 16px;
 	}
-
 	.btns {
 		width: 100%;
 		display: grid;
 		row-gap: 8px;
 	}
-
 	.t-center {
 		text-align: center;
 	}
-
 	.t-end {
 		text-align: end;
 	}
-
+	.f-18 {
+		font-size: 18px;
+	}
 	.f-14 {
 		font-size: 14px;
 	}
-
 	.f-500 {
 		font-weight: 500;
 	}
 	.w-full {
 		width: 100%;
+	}
+	.p-32 {
+		padding: 32px;
+	}
+	.spacer {
+		height: 44px;
 	}
 	* :global {
 		@include common-app;
@@ -225,11 +168,157 @@
 				border-radius: 6px;
 				background-color: white;
 			}
-
 			.s-input__details {
 				font-size: 13px;
 				font-weight: 500;
 			}
+			.s-text-field__input label {
+				overflow: visible;
+			}
+			.s-input input,
+			.s-list-item__title {
+				line-height: normal;
+			}
+		}
+		.hover {
+			border: 2px solid transparent;
+			&:hover {
+				border: 2px solid black;
+			}
 		}
 	}
 </style>
+
+<svelte:head>
+	<title>Masuk</title>
+	<meta name="description" content="Masuk Akun" />
+</svelte:head>
+
+<div transition:fade class="primary-color">
+	<MaterialAppMin>
+		<ProgressLinear bind:this="{loader}" />
+		<AppBar class="transparent" flat>
+			<span slot="icon">
+				<Button fab icon text size="small" on:click="{() => history.back()}">
+					<Icon path="{mdiChevronLeft}" />
+				</Button>
+			</span>
+		</AppBar>
+		<main>
+			{#if $is_desktop}
+				<header transition:fade class="title">
+					<img
+						class="logo"
+						src="{logo}"
+						alt="ada ikan"
+						width="64"
+						height="64"
+					/>
+					<span>Ada Ikan</span>
+				</header>
+			{/if}
+			<div class="spacer"></div>
+			<form
+				on:submit|preventDefault="{submit}"
+				class="{$is_desktop ? 'card p-32' : ''}"
+			>
+				<fieldset>
+					<div class="title">
+						{#if !$is_desktop}
+							<img
+								transition:fade
+								class="logo"
+								src="{logo}"
+								alt="ada ikan"
+								width="64"
+								height="64"
+							/>
+							<span transition:fade>Masuk</span>
+						{:else}
+							<span class="f-18 f-500">Masuk</span>
+						{/if}
+					</div>
+					<div class="w-full">
+						<Alert bind:this="{alert}" />
+					</div>
+					<div class="content">
+						<Select
+							bind:value="{role}"
+							items="{as}"
+							class="textfield"
+							placeholder="{$is_desktop ? '' : 'Sebagai'}"
+							solo="{!$is_desktop}"
+							outlined="{$is_desktop}"
+							required
+						>
+							{#if $is_desktop}
+								Sebagai
+							{/if}
+						</Select>
+						<TextField
+							bind:value="{username}"
+							class="textfield"
+							placeholder="{$is_desktop ? '' : 'Username'}"
+							solo="{!$is_desktop}"
+							outlined="{$is_desktop}"
+							autocomplete="username"
+							required
+						>
+							{#if $is_desktop}
+								Username
+							{/if}
+						</TextField>
+						<div>
+							<TextField
+								class="textfield"
+								bind:value="{password}"
+								placeholder="{$is_desktop ? '' : 'Password'}"
+								solo="{!$is_desktop}"
+								outlined="{$is_desktop}"
+								type="{showPassword ? 'text' : 'password'}"
+								autocomplete="current-password"
+								required
+							>
+								<div>
+									{#if $is_desktop}
+										Password
+									{/if}
+								</div>
+								<div slot="append">
+									<Button
+										fab
+										icon
+										text
+										size="small"
+										on:click="{() => {
+											showPassword = !showPassword;
+										}}"
+									>
+										<Icon
+											class="grey-text text-darken-3"
+											path="{showPassword ? mdiEyeOff : mdiEye}"
+										/>
+									</Button>
+								</div>
+							</TextField>
+							<div class="t-end f-14">
+								<a
+									class="{$is_desktop ? 'black-text' : 'white-text'}"
+									href="/entry/reset">Lupa Password?</a
+								>
+							</div>
+						</div>
+					</div>
+					<div class="btns">
+						<Button
+							type="submit"
+							size="large"
+							disabled="{disableSubmit}"
+							outlined="{$is_desktop}">Masuk</Button
+						>
+					</div>
+				</fieldset>
+			</form>
+		</main>
+	</MaterialAppMin>
+</div>
