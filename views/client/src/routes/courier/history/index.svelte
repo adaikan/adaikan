@@ -147,6 +147,10 @@
 				border-radius: 6px;
 			}
 		}
+		.list {
+			display: grid;
+			gap: 16px;
+		}
 		.s-badge {
 			width: 100%;
 		}
@@ -165,10 +169,10 @@
 			<span slot="title">{title}</span>
 		</AppBar>
 		<main>
-			<List>
+			<List class="list">
 				{#if history}
-					<Card>
-						{#each history as delivery}
+					{#each history as delivery}
+						<Card>
 							<ListItem
 								on:click="{() => goto(`/courier/history/${delivery?.id}`)}"
 							>
@@ -195,8 +199,8 @@
 									</Chip>
 								</div>
 							</ListItem>
-						{/each}
-					</Card>
+						</Card>
+					{/each}
 				{/if}
 			</List>
 		</main>
