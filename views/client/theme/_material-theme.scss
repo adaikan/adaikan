@@ -1,5 +1,6 @@
 $primary-color: #42A5F5;
 $secondary-color: #00796B;
+$tertiary-color: #263238;
 $success-color: #4caf50;
 $info-color: #00bcd4;
 $warning-color: #fb8c00;
@@ -49,3 +50,9 @@ $transitions: ();
 $material-light-theme: ();
 $material-dark-elevation-colors: ();
 $material-dark-theme: ();
+
+:root {
+  --primary-color: #{$primary-color};
+  --secondary-color: #{$secondary-color};
+  --tertiary-color: #{$tertiary-color};
+}
