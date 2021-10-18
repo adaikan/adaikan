@@ -10,21 +10,16 @@
 		Menu,
 	} from 'svelte-materialify/src';
 	import { mdiChevronLeft, mdiMessageTextOutline } from '@mdi/js';
-	import { mdiClipboardTextClockOutline } from '$lib/icons';
 	import ProgressLinear from '$components/progress-linear.svelte';
-	import CartCard from '$components/cart-card.svelte';
 	import OrderDetail from './_order-detail.svelte';
 	import Snackbar from '$components/snackbar.svelte';
 	import UserUnauthDialog from '$components/user-unauth-dialog.svelte';
 
 	import { onMount, onDestroy, getContext } from 'svelte';
-	import { writable } from 'svelte/store';
-	import { fade, slide } from 'svelte/transition';
-	import { browser, dev } from '$app/env';
+	import { slide } from 'svelte/transition';
 	import { goto } from '$app/navigation';
-	import { assets } from '$app/paths';
 	import { page, session } from '$app/stores';
-	import { Currency, wait } from '$lib/helper';
+	import { wait } from '$lib/helper';
 
 	import type { BuyerClient } from '../__layout.svelte';
 
@@ -47,7 +42,7 @@
 	};
 	let snackbar: Snackbar;
 	let showUserUnauthDialog = false;
-	let disable =  false;
+	let disable = false;
 	let contact: { name: string; telp: string; node: number }[] = [];
 
 	$: isLoading = loader?.active;
@@ -92,6 +87,7 @@
 	async function accept() {
 		try {
 			loader.loading();
+			disable = true;
 			if (order.status == 'Delivery') {
 				await client.api.order.update({
 					where: { id: order.id },
@@ -99,8 +95,8 @@
 						delivery: {
 							update: {
 								confirmed: true,
-							}
-						}
+							},
+						},
 					},
 				});
 				snackbar.setText('Pengiriman terkonfirmasi');
@@ -122,12 +118,10 @@
 		} catch (error: any) {
 			snackbar.setText(error.message);
 			snackbar.show();
+			disable = false;
 		} finally {
 			loader.loaded();
 		}
-	}
-	function toMoney(value: any) {
-		return 'Rp. ' + Currency.toMoney(value);
 	}
 	async function downloader(src: string) {
 		return URL.createObjectURL(await client.api.product.downloadImage(src));
@@ -224,9 +218,25 @@
 					{:else if order.status == 'Process'}
 						<div></div>
 					{:else if order.status == 'Delivery'}
-						<Button class="primary-color" on:click="{accept}">Sampai</Button>
+						{#if order.delivery.confirmed}
+							<Button class="" disabled>Selesai</Button>
+						{:else}
+							<Button
+								class="primary-color"
+								disabled="{disable}"
+								on:click="{accept}">Selesai</Button
+							>
+						{/if}
 					{:else if order.status == 'Confirm'}
-						<Button class="primary-color" on:click="{accept}">Selesai</Button>
+						{#if order.confirmed}
+							<Button class="" disabled>Selesai</Button>
+						{:else}
+							<Button
+								class="primary-color"
+								disabled="{disable}"
+								on:click="{accept}">Selesai</Button
+							>
+						{/if}
 					{:else if order.status == 'Done'}
 						<div></div>
 					{:else if order.status == 'Reject'}
