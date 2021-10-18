@@ -1,7 +1,29 @@
 import type ClientApi from '$lib/client-api';
 import type Token from '$lib/token';
-import type { Data, Stat, SentEvent } from '$server/schemas/v0-alpha.1/admin';
-export type { Data, Stat, SentEvent };
+import type {
+	Data,
+	Stat,
+	SentEvent,
+	User,
+	Slide,
+	ProductData,
+	OrderData,
+	OrderDataDetail,
+	Sale,
+	SaleDetail
+} from '$server/schemas/v0-alpha.1/admin';
+export type {
+	Data,
+	Stat,
+	SentEvent,
+	User,
+	Slide,
+	ProductData,
+	OrderData,
+	OrderDataDetail,
+	Sale,
+	SaleDetail
+};
 export default class AdminClientApi {
 	api: ClientApi;
 	token: Token;
@@ -97,7 +119,7 @@ export default class AdminClientApi {
 				endpoint: 'slide',
 				headers: { authorization: 'Bearer ' + (await this.getToken()) }
 			})
-			.send<string[]>();
+			.send<Slide[]>();
 		return response.read();
 	}
 	public async setSlide(data: FormData) {
@@ -112,7 +134,109 @@ export default class AdminClientApi {
 		return response.read();
 	}
 
-	public event() {
-		return this.api.event({persist: true});
+	public async user(role?: string, id?: number) {
+		let endpoint = 'user';
+		if (role && id) {
+			endpoint += '/' + role + '-' + id;
+		}
+		const response = await this.api
+			.request({
+				method: 'GET',
+				endpoint,
+				headers: { authorization: 'Bearer ' + (await this.getToken()) }
+			})
+			.send<User>();
+		return response.read();
+	}
+	public async users() {
+		const response = await this.api
+			.request({
+				method: 'GET',
+				endpoint: 'user',
+				headers: { authorization: 'Bearer ' + (await this.getToken()) }
+			})
+			.send<User[]>();
+		return response.read();
+	}
+	public async product(id: number) {
+		const response = await this.api
+			.request({
+				method: 'GET',
+				endpoint: 'product/' + id,
+				headers: { authorization: 'Bearer ' + (await this.getToken()) }
+			})
+			.send<ProductData>();
+		return response.read();
+	}
+	public async products() {
+		const response = await this.api
+			.request({
+				method: 'GET',
+				endpoint: 'product',
+				headers: { authorization: 'Bearer ' + (await this.getToken()) }
+			})
+			.send<ProductData[]>();
+		return response.read();
+	}
+	public async order(id: number) {
+		const response = await this.api
+			.request({
+				method: 'GET',
+				endpoint: 'order/' + id,
+				headers: { authorization: 'Bearer ' + (await this.getToken()) }
+			})
+			.send<OrderDataDetail>();
+		return response.read();
+	}
+	public async orders() {
+		const response = await this.api
+			.request({
+				method: 'GET',
+				endpoint: 'order',
+				headers: { authorization: 'Bearer ' + (await this.getToken()) }
+			})
+			.send<OrderData[]>();
+		return response.read();
+	}
+
+	public async sale(id: number) {
+		const response = await this.api
+			.request({
+				method: 'GET',
+				endpoint: 'sales/' + id,
+				headers: { authorization: 'Bearer ' + (await this.getToken()) }
+			})
+			.send<SaleDetail>();
+		return response.read();
+	}
+	public async sales() {
+		const response = await this.api
+			.request({
+				method: 'GET',
+				endpoint: 'sales',
+				headers: { authorization: 'Bearer ' + (await this.getToken()) }
+			})
+			.send<Sale[]>();
+		return response.read();
+	}
+
+	public get log() {
+		return this.api.event({ endpoint: 'log', persist: true });
+	}
+
+	public async logReset() {
+		const response = await this.api
+			.request({
+				method: 'DELETE',
+				endpoint: 'log',
+				headers: { authorization: 'Bearer ' + (await this.getToken()) },
+				body: ''
+			})
+			.send<boolean>();
+		return response.read();
+	}
+
+	public get event() {
+		return this.api.event({ persist: true });
 	}
 }
