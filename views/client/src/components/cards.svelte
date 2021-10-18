@@ -3,21 +3,20 @@
 </script>
 
 <script lang="ts">
+	export let px = 0;
+	export let py = 0;
 	onMount(init);
 	onDestroy(release);
 	async function init() {}
 	async function release() {}
 </script>
 
-<section class="cards">
-	<slot />
-</section>
-
 <style lang="scss">
 	.cards {
 		display: grid;
 		grid-template-rows: auto;
 		gap: 16px;
+		padding: var(--py) var(--px);
 		@media (min-width: 0px) and (max-width: 300px) {
 			grid-template-columns: 1fr;
 		}
@@ -35,3 +34,7 @@
 		}
 	}
 </style>
+
+<section class="cards" style="--px: {px}px;--py: {py}px;">
+	<slot />
+</section>
