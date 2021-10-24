@@ -13,6 +13,7 @@
 <script lang="ts">
 	const client = getContext<ClientApi>('clientApi');
 	const user = getContext<User>('user');
+	let success = false;
 	let e_type: any = '';
 
 	$: {
@@ -24,11 +25,11 @@
 	}
 </script>
 
-{#if $user}
+{#if success}
 	<slot />
 {:else}
 	<Page class="text-gray-900 bg-gray-50 dark:text-gray-50 dark:bg-gray-900">
-		<Splash bind:error_type={e_type} />
+		<Splash bind:error_type={e_type} bind:success />
 	</Page>
 {/if}
 

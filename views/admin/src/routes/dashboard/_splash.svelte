@@ -27,18 +27,23 @@
 	onMount(async () => {
 		try {
 			$progress = 30;
+
 			await client.ready;
 			$progress = 50;
+
 			const result = await client.internal.auth();
 			$progress = 70;
+
+			await wait({ timeout: 500 });
 			user.set(result);
-			$progress = 80;
-			await wait({ timeout: 500 });
 			$progress = 90;
-			success = true;
-			message = 'Welcome ' + result.username;
+
 			await wait({ timeout: 500 });
+			message = 'Welcome ' + result.username;
 			$progress = 100;
+
+			await wait({ timeout: 500 });
+			success = true;
 		} catch (error: any) {
 			failed = true;
 			message = error.message;
@@ -47,7 +52,7 @@
 	});
 </script>
 
-<section transition:fade class="page place-content-center">
+<section transition:fade class="page place-content-center place-items-center">
 	<section class="w-[180px] grid gap-10 bg-transparent rounded-md px-4 py-6">
 		<img src={logo} alt="" width="72" height="72" class="justify-self-center" />
 		<progress

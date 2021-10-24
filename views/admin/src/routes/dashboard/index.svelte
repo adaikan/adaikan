@@ -26,6 +26,7 @@
 <script lang="ts">
 	const client = getContext<ClientApi>('clientApi');
 	const user = getContext<User>('user');
+	const event = client.admin.event;
 
 	let mode = 'dark';
 	let drawerOpened = true;
@@ -44,19 +45,17 @@
 			if (!user_login) {
 				return goto(base + '/');
 			}
-
-			stat = await client.admin.stat();
-
-			const event = await client.admin.event.open();
-
-			event.addEventListener('message', async (event) => {
-				stat = await client.admin.stat();
-			});
 			account = {
 				image: user_login.image ?? '',
 				name: user_login.username,
 				role: user_login.role
 			};
+			stat = await client.admin.stat();
+
+			await event.open();
+			event.addEventListener('message', async (event) => {
+				stat = await client.admin.stat();
+			});
 		} catch (error: any) {
 			console.error(error);
 		} finally {
@@ -65,7 +64,7 @@
 	}
 	async function release() {
 		try {
-			client.admin.event.close();
+			event.close();
 		} catch (error: any) {
 			console.error(error);
 		} finally {
@@ -92,7 +91,7 @@
 				<section>
 					<div class="text-2xl font-bold">{title}</div>
 				</section>
-				<section class="flex gap-4">
+				<section class="grid grid-cols-4 gap-4">
 					<Stat {stat} />
 				</section>
 			</Main>
