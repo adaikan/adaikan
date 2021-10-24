@@ -12,15 +12,17 @@
 	import { slide } from 'svelte/transition';
 	import { getImageUrl, ObserverUnsafe, wait } from '$lib/helper';
 
-	import type { BuyerClient } from './__layout.svelte';
+	import type { BuyerClient, Service } from './__layout.svelte';
 </script>
 
 <script lang="ts">
 	const client = getContext<BuyerClient>('buyer');
 	const is_desktop = getContext<ObserverUnsafe<boolean>>('is_desktop');
+	const service = getContext<Service>('service');
+
 	let product: (BuyerClient.Product & { store: BuyerClient.Store })[] = [];
 	let searchResult: (BuyerClient.Product & { store: BuyerClient.Store })[] = [];
-	let slides: { src: string; link: string }[] = [];
+	let slides: { src: string; href: string }[] = [];
 	let fakeData = Array(6);
 	let progress: ProgressLinear;
 	let mode: 'search' | 'display' = 'display';
