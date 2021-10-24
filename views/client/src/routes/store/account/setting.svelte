@@ -3,60 +3,39 @@
 		MaterialAppMin,
 		ProgressLinear,
 		AppBar,
-		Footer,
 		Button,
 		Icon,
-		Menu,
-		NavigationDrawer,
-		Avatar,
 		List,
-		ListGroup,
 		ListItem,
-		ListItemGroup,
-		Card,
-		TextField,
 		Switch,
-		Checkbox,
 		Divider,
 		Subheader,
 	} from 'svelte-materialify/src';
 	import {
-		mdiAccountOutline,
-		mdiClipboardListOutline,
-		mdiBellOutline,
-		mdiTagOutline,
-		mdiLogout,
-		mdiAccountCircle,
-		mdiMapMarkerRadiusOutline,
-		mdiCheck,
-		mdiEyeOff,
-		mdiEye,
-		mdiDeleteOutline,
 		mdiChevronLeft,
-		mdiChevronRight,
 	} from '@mdi/js';
 	import Snackbar from '$components/snackbar.svelte';
 	import { onMount, onDestroy, getContext } from 'svelte';
-	import { derived, writable } from 'svelte/store';
-	import { fade, slide } from 'svelte/transition';
-	import { browser, dev } from '$app/env';
-	import { goto } from '$app/navigation';
-	import { assets } from '$app/paths';
-	import { navigating, page } from '$app/stores';
+	import { writable } from 'svelte/store';
+	import { slide } from 'svelte/transition';
+	import { navigating } from '$app/stores';
 	import { Diff } from '$lib/helper';
-	import * as rules from '$lib/rules';
+	
+	import type { Service } from '../../__layout.svelte';
 	import type { SellerClientApi } from '../__layout.svelte';
 </script>
 
 <script lang="ts">
 	const client = getContext<SellerClientApi>('seller');
+	const service = getContext<Service>('service');
 	const showProgress = writable(true);
 	const progress = writable(0);
 	const indeterminate = writable(true);
-	let seller: SellerClientApi.Data.Seller;
-	let store: SellerClientApi.Data.Store;
+	let seller: SellerClientApi.Seller;
+	let store: SellerClientApi.Store;
 	let copied: any;
 	let snackbar: Snackbar;
+	let push_notification = false;
 	$: {
 		if (navigating && $navigating) {
 			$showProgress = true;
@@ -81,6 +60,8 @@
 				where: { id: seller.storeId },
 				rejectOnNotFound: true,
 			});
+
+			await ask_push();
 		} catch (error: any) {
 			snackbar.setText(error.message);
 			snackbar.show();
@@ -106,6 +87,30 @@
 			snackbar.setText(error.message);
 		} finally {
 			snackbar.show();
+			$showProgress = false;
+		}
+	}
+	async function ask_push() {
+		push_notification = await service.subscribed();
+	}
+	async function request_push() {
+		try {
+			$showProgress = true;
+			if (push_notification) {
+				await service.unsubscribe({
+					nodeId: store.chatNodeId,
+				});
+			} else {
+				await service.subscribe({
+					role: 'courier',
+					userId: store.id,
+					nodeId: store.chatNodeId,
+				});
+			}
+			push_notification = !push_notification;
+		} catch (error: any) {
+			console.error(error);
+		} finally {
 			$showProgress = false;
 		}
 	}
@@ -143,6 +148,16 @@
 							<span slot="subtitle"> Allow Notifications </span>
 							<span slot="append">
 								<Switch checked />
+							</span>
+						</ListItem>
+						<ListItem>
+							<span>Web Push</span>
+							<span slot="subtitle"> Allow Push Notification </span>
+							<span slot="append">
+								<Switch
+									checked="{push_notification}"
+									on:change="{request_push}"
+								/>
 							</span>
 						</ListItem>
 						<Divider />
