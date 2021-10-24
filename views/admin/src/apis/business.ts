@@ -15,7 +15,7 @@ export default class AddressClientApi {
 	token: Token;
 	constructor(clientApi: ClientApi, token: Token) {
 		this.api = clientApi.clone({
-			path: 'business',
+			path: '/business',
 		});
 		this.token = token.clone();
 	}

@@ -85,3 +85,18 @@ export type WebSocketMessage<M = any> = {
 	tag: string;
 	data: M;
 };
+export interface WebPushPayload {
+	tag: string;
+	subscribers: string[];
+	href: string;
+	notifications: {
+		tag: string;
+		title: string;
+		body: string;
+		image?: string;
+		badge?: string;
+		icon?: string;
+		renotify?: boolean;
+	};
+	[key: string]: any;
+}

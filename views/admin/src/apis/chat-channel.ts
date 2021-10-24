@@ -77,7 +77,7 @@ export default class ChatChannelClientApi {
 	token: Token;
 	constructor(clientApi: ClientApi, token: Token) {
 		this.api = clientApi.clone({
-			path: 'chat-channel',
+			path: '/chat-channel',
 		});
 		this.token = token.clone();
 	}

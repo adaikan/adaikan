@@ -77,7 +77,7 @@ export default class GroupOrderClientApi {
 	token: Token;
 	constructor(clientApi: ClientApi, token: Token) {
 		this.api = clientApi.clone({
-			path: 'group-order',
+			path: '/group-order',
 		});
 		this.token = token.clone();
 	}

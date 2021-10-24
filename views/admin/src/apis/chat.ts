@@ -33,7 +33,7 @@ export default class ChatClientApi {
 	token: Token;
 	constructor(clientApi: ClientApi, token: Token) {
 		this.api = clientApi.clone({
-			path: 'chat',
+			path: '/chat',
 		});
 		this.token = token.clone();
 	}

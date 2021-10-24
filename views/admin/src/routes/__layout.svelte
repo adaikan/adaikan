@@ -1,17 +1,20 @@
 <script context="module" lang="ts">
 	import { onMount, setContext } from 'svelte';
 	import { ClientApi } from '$apis/index';
-	import { APIS_URL, FETCH_MODE, WS_URL } from '$lib/env';
+	import { APIS_URL, FETCH_MODE, WS_URL, ES_URL } from '$lib/env';
+	import { Service } from '$lib/service-register';
 	import { user, setting } from '$lib/store';
 	import { dev } from '$app/env';
 
 	export type { Setting, User } from '$lib/store';
-	export type { ClientApi };
+	export type { ClientApi, Service };
 </script>
 
 <script lang="ts">
+	const service = new Service({debug: dev});
 	const clientApi = new ClientApi({
 		base: APIS_URL,
+		esbase: ES_URL,
 		wsbase: WS_URL,
 		debug: dev,
 		mode: FETCH_MODE,
@@ -19,9 +22,11 @@
 		version: 'v0-alpha.1'
 	});
 	setContext('clientApi', clientApi);
+	setContext('service', service);
 	setContext('user', user);
 	setContext('setting', setting);
 	onMount(() => {
+		service.init();
 		clientApi.init();
 	});
 </script>

@@ -87,7 +87,7 @@ export default class SellerClientApi {
 	token: Token;
 	constructor(clientApi: ClientApi, token: Token) {
 		this.api = clientApi.clone({
-			path: 'seller',
+			path: '/seller',
 		});
 		this.token = token.clone();
 	}

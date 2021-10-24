@@ -59,6 +59,7 @@
 <style lang="scss">
 	progress {
 		transition: height 250ms ease-out;
+		z-index: 1;
 	}
 	.pos {
 		top: 0;

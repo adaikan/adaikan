@@ -87,7 +87,7 @@ export default class CourierClientApi {
 	token: Token;
 	constructor(clientApi: ClientApi, token: Token) {
 		this.api = clientApi.clone({
-			path: 'courier',
+			path: '/courier',
 		});
 		this.token = token.clone();
 	}

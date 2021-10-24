@@ -5,6 +5,7 @@ import type {
 	UnregisterData,
 	LoginData,
 	ChangePasswordData,
+	ResetPasswordData,
 	Data,
 	DataHistory,
 	GetQuery,
@@ -41,6 +42,7 @@ export type {
 	UnregisterData,
 	LoginData,
 	ChangePasswordData,
+	ResetPasswordData,
 	Data,
 	DataHistory,
 	GetQuery,
@@ -76,7 +78,7 @@ export default class BuyerClientApi {
 	token: Token;
 	constructor(clientApi: ClientApi, token: Token) {
 		this.api = clientApi.clone({
-			path: 'buyer',
+			path: '/buyer',
 		});
 		this.token = token.clone();
 	}
@@ -138,6 +140,17 @@ export default class BuyerClientApi {
 			.send<Data>();
 		return response.read();
 	}
+	public async resetPassword(data: ResetPasswordData) {
+		const response = await this.api
+			.request<ResetPasswordData>({
+				endpoint: 'password-reset',
+				method: 'PATCH',
+				headers: { authorization: 'Bearer ' + (await this.getToken()) },
+				body: data,
+			})
+			.send<Data>();
+		return response.read();
+	}
 	public async auth() {
 		const response = await this.api
 			.request({
@@ -168,6 +181,17 @@ export default class BuyerClientApi {
 				body: data,
 			})
 			.send<boolean>();
+		return response.read();
+	}
+	public async verify_reset(data: Verify) {
+		const response = await this.api
+			.request({
+				endpoint: 'verify-reset',
+				method: 'POST',
+				headers: { authorization: 'Bearer ' + (await this.getToken()) },
+				body: data,
+			})
+			.send<Data>();
 		return response.read();
 	}
 

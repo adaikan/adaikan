@@ -45,6 +45,7 @@ import type {
 	UnregisterData,
 	ChangePasswordData,
 	Verify,
+	ResetPasswordData,
 } from 'schemas/v0-alpha.1/buyer';
 
 import fs from 'fs-extra';
@@ -216,6 +217,36 @@ const route: FastifyPluginAsync = async (server, opts) => {
 		schema: {},
 	});
 
+	server.route<{ Body: ResetPasswordData }>({
+		url: `/${api}/password-reset`,
+		method: 'PATCH',
+		handler: async (request, reply) => {
+			const user = await request.identify();
+			const data = await model.search({
+				where: {
+					AND: [
+						{ username: request.body.username },
+						{ email: request.body.email },
+					],
+				},
+			});
+
+			if (data) {
+				const result = await model.setInfo(user).update({
+					where: { id: data.id },
+					data: {
+						password: await bcrypt.hash(request.body.new_password, salt),
+					},
+				});
+				reply.ok<Data>(result);
+				server.event.emit(`model:${api}:change`, data);
+			} else {
+				throw Api.Error.FailedAuthentication('Unknown User');
+			}
+		},
+		schema: {},
+	});
+
 	server.route({
 		url: `/${api}/auth`,
 		method: 'GET',
@@ -286,6 +317,29 @@ const route: FastifyPluginAsync = async (server, opts) => {
 						data: { verified: true },
 					});
 					reply.ok(true);
+				} else {
+					throw Api.Error.FailedVerifyOtp('Invalid Otp');
+				}
+			} else {
+				throw Api.Error.FailedAuthentication('Unknown User');
+			}
+		},
+		schema: {},
+	});
+
+	server.route<{
+		Body: Verify;
+	}>({
+		url: `/${api}/verify-reset`,
+		method: 'POST',
+		handler: async (request, reply) => {
+			const user = await request.identify();
+			const result = await model.get({ where: { email: request.body.email } });
+
+			if (result) {
+				const valid = totp.verify(request.body.otp, result.password);
+				if (valid) {
+					reply.ok(result);
 				} else {
 					throw Api.Error.FailedVerifyOtp('Invalid Otp');
 				}

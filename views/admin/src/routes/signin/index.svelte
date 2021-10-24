@@ -135,7 +135,7 @@
 						<input
 							id="password"
 							type={showPass ? 'text' : 'password'}
-							autocomplete="new-password"
+							autocomplete="password"
 							placeholder="Password"
 							required
 							value={password}

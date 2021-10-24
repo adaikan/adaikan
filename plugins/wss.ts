@@ -2,11 +2,14 @@ import type { FastifyPluginAsync, FastifyInstance } from 'fastify';
 import type { JWTPayload, UserInfo } from '../global';
 
 import wrapper from 'fastify-plugin';
-import { WebSocketServer, WebSocket } from 'ws';
-// import { ServerResponse } from 'http';
-// import fs from 'fs';
-// import path from 'path';
-import { WSS, Handler, Route, ChannelStore, Channel, Address } from 'utility/wss';
+import {
+	WSS,
+	Handler,
+	Route,
+	ChannelStore,
+	Channel,
+	Address,
+} from 'utility/wss';
 import { Server } from 'http';
 
 declare module 'fastify' {
@@ -30,6 +33,7 @@ interface ListenOptions {
 }
 interface Options {
 	prefix?: string;
+	ping?: number;
 }
 interface Plugin extends FastifyPluginAsync<Options> {}
 
@@ -48,6 +52,7 @@ const plugin: Plugin = async (app, opts) => {
 		listen(options?: ListenOptions) {
 			WSS.setup({
 				...options,
+				ping: opts.ping,
 				app,
 			});
 			return this;

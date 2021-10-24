@@ -16,11 +16,11 @@
 	import { base } from '$app/paths';
 	import { goto } from '$app/navigation';
 
-	import { Diff } from '$lib/helper';
+	import { Diff, genRandomNumber } from '$lib/helper';
 
 	import type { ClientApi, User } from '../__layout.svelte';
 
-	const title = 'Server';
+	const title = 'Business';
 	const desc = '';
 </script>
 
@@ -35,11 +35,22 @@
 	let progress: Progress;
 
 	let config: ClientApi.Admin.Data['business'];
-	let disable = false;
+	let disable = true;
 	let copy: any;
 	let slides: ClientApi.Admin.Slide[] = [];
-	let form_slide: FormData;
+	let slides_image: FormData;
 	let errorText = '';
+
+	$: {
+		if (copy) {
+			const changed = Diff.object(copy, { config, slides });
+			if (changed) {
+				disable = false;
+			} else {
+				disable = true;
+			}
+		}
+	}
 
 	onMount(init);
 	onDestroy(release);
@@ -51,22 +62,18 @@
 			if (!user_login) {
 				return goto(base + '/');
 			}
+
 			account = {
 				image: user_login.image ?? '',
 				name: user_login.username,
 				role: user_login.role
 			};
 			config = await client.admin.getBusiness();
-			copy = Diff.objectCopy(config);
-
 			slides = await client.admin.getSlide();
-			form_slide = new FormData();
-			for (const slide of slides) {
-				const response = await fetch(slide.src);
-				const image = await response.blob();
-				form_slide.append(slide.id + '', image);
-				slide.src = URL.createObjectURL(image);
-			}
+
+			slides_image = new FormData();
+
+			copy = Diff.objectCopy({ config, slides });
 		} catch (error: any) {
 			console.error(error);
 		} finally {
@@ -84,34 +91,33 @@
 		try {
 			progress.showing();
 			disable = true;
-			const changed = Diff.object(copy, config);
+			const changed = Diff.object(copy, { config, slides });
 			if (changed) {
-				const decision = Diff.objectCopy(config);
-				const result = await client.admin.setBusiness(decision);
-				config = result;
-				Diff.objectAssign(copy, config);
-			}
-			if (form_slide) {
-				for (const slide of slides) {
-					form_slide.append('link', slide.link);
+				if (changed.config) {
+					await client.admin.setBusiness(config);
 				}
-				const result = await client.admin.setSlide(form_slide);
+				if (changed.slides) {
+					await client.admin.setSlide(slides, slides_image);
+				}
+				Diff.objectAssign(copy, { config, slides });
 			}
 		} catch (error: any) {
 			errorText = error.message;
-		} finally {
 			disable = false;
+		} finally {
 			progress.hiding();
 		}
 	}
 	function inputFile(this: HTMLInputElement) {
 		if (this.files) {
-			for (let index = slides.length; index < this.files.length; index++) {
+			for (let index = 0; index < this.files.length; index++) {
 				const file = this.files[index];
-				form_slide.append(index + '', file);
-				slides.push({ src: URL.createObjectURL(file), link: '', id: index });
+				const id = genRandomNumber();
+				slides_image.append(id + '', file);
+				slides.push({ src: URL.createObjectURL(file), href: '', id });
 			}
 			slides = slides;
+			console.log(slides);
 		}
 	}
 </script>
@@ -122,16 +128,16 @@
 </svelte:head>
 
 <Page {mode} class="text-gray-900 bg-gray-50 dark:text-gray-50 dark:bg-gray-900">
-	<section transition:fade class="flex w-screen h-screen overflow-auto">
+	<section transition:fade class="flex">
 		<Drawer min_width={false} show={drawerOpened} class="bg-base-100 w-[300px]">
 			<DrawerContent />
 		</Drawer>
-		<Content class="flex-grow w-full h-screen overflow-auto">
+		<Content class="flex-grow">
 			<Appbar class="bg-base-100">
 				<AppbarContent bind:account bind:mode bind:drawerOpened />
 			</Appbar>
 			<Progress bind:this={progress} />
-			<Main class="flex-grow w-full">
+			<Main>
 				<section>
 					<div class="text-2xl font-bold">{title}</div>
 				</section>
@@ -185,7 +191,7 @@
 												<button
 													type="button"
 													on:click={() => {
-														form_slide.delete(index + '');
+														slides_image.delete(index + '');
 														slides.splice(index, 1);
 														slides = slides;
 													}}
@@ -209,7 +215,7 @@
 													<img src={slide.src} alt="" class="h-full" />
 												</label>
 												<input
-													bind:value={slide.link}
+													bind:value={slide.href}
 													id="image-{index}"
 													type="url"
 													required
@@ -226,7 +232,7 @@
 												on:input={inputFile}
 												id="image"
 												type="file"
-												accept="image"
+												accept="image/*"
 												multiple
 												class="w-full h-full absolute opacity-0 z-10 cursor-pointer"
 											/>
@@ -260,6 +266,7 @@
 					</div>
 				</form>
 			</Main>
+			<div class="flex-grow" />
 			<Footer class="bg-base-100 justify-center">
 				<FooterContent />
 			</Footer>

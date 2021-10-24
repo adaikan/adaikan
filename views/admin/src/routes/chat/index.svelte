@@ -15,6 +15,9 @@
 
 	import { base } from '$app/paths';
 	import { goto } from '$app/navigation';
+	import { page } from '$app/stores';
+
+	import logo from '$static/logo.png';
 
 	import type { ClientApi, User } from '../__layout.svelte';
 
@@ -25,11 +28,13 @@
 <script lang="ts">
 	const client = getContext<ClientApi>('clientApi');
 	const user = getContext<User>('user');
+	const ws = client.chat.ws_v2;
 
 	let mode = 'dark';
 	let drawerOpened = true;
 	let account = { image: '', name: '', role: '' };
 	let user_login = $user;
+	let connect_with = $page.query.get('connect_with');
 	let progress: Progress;
 
 	let messages_container: HTMLElement;
@@ -57,22 +62,27 @@
 				name: user_login.username,
 				role: user_login.role
 			};
+			connect_with &&
+				(await client.chat.connectContact({
+					myId: user_login.chatNodeId,
+					theirId: +connect_with
+				}));
 			channels = await client.chat.getChannels({ nodeId: user_login.chatNodeId });
 
-			const ws = await client.chat.ws_v2.open();
-			ws.send({ tag: 'connect', data: { id: user_login.chatNodeId, channel: channels } })
-				.message('join', (data) => {
+			await ws.open();
+			ws.send('connect', { nodeId: user_login.chatNodeId, channel: channels })
+				.receive('join', (data) => {
 					channels.push(data);
 					channels = channels;
 				})
-				.message('message', (data) => {
+				.receive('message', (data) => {
 					channels.find((channel) => channel.id == data.channelId)?.message.push(data);
 					channels = channels;
 					if (document.visibilityState == 'hidden' && Notification.permission == 'granted') {
-						const notification = new Notification(data.sentBy.name, {
+						const notification = new Notification(data.sender.name, {
 							body: data.text,
-							badge: data.sentBy.image,
-							icon: data.sentBy.image,
+							badge: logo,
+							icon: logo,
 							tag: data.channelId + '',
 							renotify: true
 						});
@@ -81,6 +91,9 @@
 						});
 					}
 					setTimeout(scrollBottom);
+				})
+				.closed.then(() => {
+					goto(base + '/');
 				});
 
 			disable = false;
@@ -93,7 +106,7 @@
 	}
 	async function release() {
 		try {
-			client.chat.ws_v2.close();
+			ws.close();
 		} catch (error: any) {
 			console.error(error);
 		} finally {
@@ -111,7 +124,7 @@
 					sentAt: new Date(),
 					text,
 					channelId: selected_channel_id,
-					sentById: user_login.chatNodeId
+					senderId: user_login.chatNodeId
 				}
 			});
 			text = '';
@@ -182,10 +195,10 @@
 								{#each channels[selected_channel_index].message as message}
 									<div
 										transition:scale
-										class="message {message.sentBy.id == $user?.chatNodeId ? 'mymessage' : ''}"
+										class="message {message.sender.id == $user?.chatNodeId ? 'mymessage' : ''}"
 									>
 										<div class="info">
-											<div class="">{message.sentBy.name}</div>
+											<div class="">{message.sender.name}</div>
 											<div class="flex-grow" />
 											<div class="">{new Date(message.sentAt).toLocaleString()}</div>
 											<div class="">

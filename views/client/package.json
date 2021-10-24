@@ -7,10 +7,10 @@
     "node": "14.18.0"
   },
   "scripts": {
+    "start": "HOST=0.0.0.0 PORT=3000 node build/index.js",
     "dev": "svelte-kit dev --host",
     "build": "svelte-kit build --verbose",
     "build:up": "npm i && npm run build",
-    "start": "svelte-kit start",
     "preview": "svelte-kit preview --host",
     "clean": "rimraf .svelte-kit"
   },
@@ -24,18 +24,19 @@
   "devDependencies": {
     "@beyonk/svelte-mapbox": "^8.1.4",
     "@originjs/vite-plugin-commonjs": "^1.0.1",
+    "@sveltejs/adapter-node": "^1.0.0-next.55",
     "@sveltejs/adapter-static": "^1.0.0-next.21",
-    "@sveltejs/kit": "^1.0.0-next.184",
+    "@sveltejs/kit": "^1.0.0-next.189",
     "@types/mapbox__mapbox-sdk": "^0.13.2",
     "autoprefixer": "^10.3.4",
     "dotenv": "^10.0.0",
-    "postcss": "^8.3.5",
-    "sass": "^1.43.2",
+    "postcss": "^8.3.11",
+    "sass": "^1.43.3",
     "svelte": "^3.44.0",
     "svelte-preprocess": "^4.9.4",
-    "ts-node": "^10.3.0",
+    "ts-node": "^10.4.0",
     "typescript": "^4.4.4",
-    "vite": "^2.6.9",
+    "vite": "^2.6.10",
     "vite-plugin-live-reload": "^2.1.0"
   }
 }

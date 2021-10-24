@@ -10,7 +10,10 @@ import type {
 	OrderData,
 	OrderDataDetail,
 	Sale,
-	SaleDetail
+	Subs,
+	SaleDetail,
+	DirTree,
+	DirFile
 } from '$server/schemas/v0-alpha.1/admin';
 export type {
 	Data,
@@ -22,14 +25,17 @@ export type {
 	OrderData,
 	OrderDataDetail,
 	Sale,
-	SaleDetail
+	Subs,
+	SaleDetail,
+	DirTree,
+	DirFile
 };
 export default class AdminClientApi {
 	api: ClientApi;
 	token: Token;
 	constructor(clientApi: ClientApi, token: Token) {
 		this.api = clientApi.clone({
-			path: 'admin'
+			path: '/admin'
 		});
 		this.token = token.clone();
 	}
@@ -122,7 +128,7 @@ export default class AdminClientApi {
 			.send<Slide[]>();
 		return response.read();
 	}
-	public async setSlide(data: FormData) {
+	public async setSlide(data: Slide[], image: FormData) {
 		const response = await this.api
 			.request({
 				method: 'PATCH',
@@ -130,8 +136,17 @@ export default class AdminClientApi {
 				headers: { authorization: 'Bearer ' + (await this.getToken()) },
 				body: data
 			})
+			.send<Slide[]>();
+		const result = await response.read();
+		await this.api
+			.request({
+				method: 'POST',
+				endpoint: 'slide/image',
+				headers: { authorization: 'Bearer ' + (await this.getToken()) },
+				body: image
+			})
 			.send<any>();
-		return response.read();
+		return result;
 	}
 
 	public async user(role?: string, id?: number) {
@@ -220,11 +235,77 @@ export default class AdminClientApi {
 		return response.read();
 	}
 
-	public get log() {
-		return this.api.event({ endpoint: 'log', persist: true });
+	public async subscribers() {
+		const response = await this.api
+			.request({
+				method: 'GET',
+				endpoint: 'subscribers',
+				headers: { authorization: 'Bearer ' + (await this.getToken()) }
+			})
+			.send<Subs[]>();
+		return response.read();
+	}
+	public async unsubscrib(id: number) {
+		const response = await this.api
+			.request({
+				method: 'DELETE',
+				endpoint: 'unsubscribe/' + id,
+				headers: { authorization: 'Bearer ' + (await this.getToken()) },
+				body: ''
+			})
+			.send<Subs>();
+		return response.read();
 	}
 
-	public async logReset() {
+	public async folder() {
+		const response = await this.api
+			.request({
+				method: 'GET',
+				endpoint: 'folder',
+				headers: { authorization: 'Bearer ' + (await this.getToken()) }
+			})
+			.send<DirTree>();
+		return response.read();
+	}
+	public async folder_upload(file: Blob, path: string) {
+		const response = await this.api
+			.request({
+				method: 'POST',
+				endpoint: 'folder' + path,
+				headers: { authorization: 'Bearer ' + (await this.getToken()) },
+				body: file
+			})
+			.send<DirFile>();
+		return response.read();
+	}
+	public async folder_create(path: string, name: string) {
+		const response = await this.api
+			.request({
+				method: 'POST',
+				endpoint: 'folder' + path + '/' + name,
+				headers: { authorization: 'Bearer ' + (await this.getToken()) },
+				body: ''
+			})
+			.send<DirTree | DirFile>();
+		return response.read();
+	}
+	public async folder_remove(path: string) {
+		const response = await this.api
+			.request({
+				method: 'DELETE',
+				endpoint: 'folder' + path,
+				headers: { authorization: 'Bearer ' + (await this.getToken()) },
+				body: null
+			})
+			.send<boolean>();
+		return response.read();
+	}
+
+	public get log() {
+		return this.api.es({ endpoint: 'log', persist: true });
+	}
+
+	public async log_reset() {
 		const response = await this.api
 			.request({
 				method: 'DELETE',
@@ -235,8 +316,18 @@ export default class AdminClientApi {
 			.send<boolean>();
 		return response.read();
 	}
+	public async log_download() {
+		const response = await this.api
+			.request({
+				method: 'GET',
+				endpoint: 'log',
+				headers: { authorization: 'Bearer ' + (await this.getToken()) }
+			})
+			.send<unknown>();
+		return response.raw;
+	}
 
 	public get event() {
-		return this.api.event({ persist: true });
+		return this.api.es({ persist: true });
 	}
 }

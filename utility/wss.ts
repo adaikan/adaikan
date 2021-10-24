@@ -10,6 +10,7 @@ export interface Options {
 	app: FastifyInstance;
 	host?: string;
 	port?: number;
+	ping?: number;
 	server?: Server;
 }
 export interface Handler {
@@ -73,13 +74,13 @@ class ChannelStore {
 			throw error;
 		}
 	}
-	addClientToChannel(key: string, client: WebSocket) {
+	addClientToChannel(key: string, client: WebSocket, meta: any) {
 		const result = this.search(key);
 		if (result) {
-			result.addClient(client);
+			result.addClient(client, meta);
 			return true;
 		} else {
-			this.create({ key }).addClient(client);
+			this.create({ key }).addClient(client, meta);
 			return true;
 		}
 	}
@@ -113,6 +114,7 @@ class ChannelStore {
 			if (channel) {
 				channel.broadcast({ data, isBinary });
 			}
+			return channel;
 		} else {
 			for (const store of this.searchAll()) {
 				if (store.hasValue) {
@@ -120,6 +122,7 @@ class ChannelStore {
 				}
 			}
 		}
+		return null;
 	}
 }
 class Address {
@@ -166,12 +169,14 @@ class Address {
 }
 class Channel {
 	key: string;
-	clients: Set<WebSocket> = new Set();
+	clients = new Set<WebSocket>();
+	meta = new Map<WebSocket, any>();
 	constructor(opts: ChannelData) {
 		this.key = opts.key;
 	}
-	addClient(client: WebSocket) {
+	addClient(client: WebSocket, meta: any) {
 		this.clients.add(client);
+		this.meta.set(client, meta);
 		client.once('close', () => {
 			this.delClient(client);
 		});
@@ -179,6 +184,7 @@ class Channel {
 	}
 	delClient(client: WebSocket) {
 		this.clients.delete(client);
+		this.meta.delete(client);
 		return this;
 	}
 	broadcast({ data: message, isBinary, exclude }: BroadcastData) {
@@ -207,16 +213,19 @@ export class WSS {
 	static setup(options: Options) {
 		const app = options.app;
 
+		if (options.ping) {
+			if (options.ping < 45000) {
+				options.ping = 59000;
+			}
+		}
+
 		this.server = new WebSocketServer({
 			host: options.host,
 			port: options.port,
 			server: options.server,
 		});
 
-		console.log(
-			chalk.bgBlack.white`Web Socket Server Created`,
-			chalk.green`[*]`
-		);
+		console.log(chalk`Web Socket Server Created`, chalk.green`[*]`);
 
 		this.server.on('listening', () => {
 			const address = this.server?.address() as {
@@ -228,33 +237,66 @@ export class WSS {
 				throw new Error('WSS address undefined');
 			}
 			app.log.info(
-				chalk.bgBlack.white`Web Socket Server Listening on ` +
+				chalk`Web Socket Server Listening on ` +
 					chalk.blueBright`ws://${address.address}:${address.port}`
 			);
 		});
 		this.server.on('connection', (ws, message) => {
 			app.log.info(
-				chalk.bgBlack.white`Web Socket Server Connection ` +
+				chalk`Web Socket Server Connection ` +
 					chalk.yellow`${message.method}: ` +
 					chalk.white`${message.url} ` +
-					chalk.blue`(${this.server?.clients.size})`
+					chalk.blue`(${this.server?.clients.size}) ` +
+					chalk.magentaBright`(${message.socket.remoteAddress})`
 			);
+
+			let id: any = undefined;
+
+			if (options.ping) {
+				id = setInterval(() => {
+					ws.ping('Hello');
+					app.log.info(
+						chalk`Web Socket Ping ` +
+							chalk.yellow`${message.method}: ` +
+							chalk.white`${message.url} ` +
+							chalk.blue`(${this.server?.clients.size}) ` +
+							chalk.magentaBright`(${message.socket.remoteAddress})`
+					);
+				}, options.ping);
+			}
+
+			ws.on('pong', (data) => {
+				app.log.info(
+					chalk`Web Socket Pong ` +
+						chalk.yellow`${message.method}: ` +
+						chalk.white`${message.url} ` +
+						'{ ' +
+						chalk.white`${data} ` +
+						'} ' +
+						chalk.blue`(${this.server?.clients.size}) ` +
+						chalk.magentaBright`(${message.socket.remoteAddress})`
+				);
+			});
 
 			ws.on('close', (code, reason) => {
 				app.log.info(
-					chalk.bgBlack.white`Web Socket Close ` +
+					chalk`Web Socket Close ` +
 						chalk.yellow`${message.method}: ` +
 						chalk.green`${code} - ` +
 						chalk.yellow`${reason} ` +
 						chalk.white`${message.url} ` +
-						chalk.blue`(${this.server?.clients.size})`
+						chalk.blue`(${this.server?.clients.size}) ` +
+						chalk.magentaBright`(${message.socket.remoteAddress})`
 				);
+				if (id) {
+					clearInterval(id);
+				}
 			});
 
 			this.lookup({ ws, message });
 		});
 		this.server.on('close', () => {
-			app.log.info(chalk.bgBlack.white`Web Socket Server Close`);
+			app.log.info(chalk`Web Socket Server Close`);
 		});
 	}
 	static route({ path, auth, handler }: Route) {

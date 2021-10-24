@@ -17,6 +17,12 @@
 	export let show = false;
 	export let force = false;
 
+	$: {
+		if (!show) {
+			removeListener();
+		}
+	}
+
 	function init(node: HTMLDialogElement) {
 		element = node;
 		if (!overlay) {
@@ -43,21 +49,21 @@
 		overlay.addEventListener('click', listener, { capture: true });
 	}
 	function removeListener() {
-		parentElement.style.position = 'relative';
-		overlay.remove();
-		overlay.removeEventListener('click', listener, { capture: true });
+		if (parentElement) {
+			parentElement.style.position = 'relative';
+			overlay.remove();
+			overlay.removeEventListener('click', listener, { capture: true });
+		}
 	}
 	function listener(event: MouseEvent) {
 		let node = element as HTMLElement;
 		if (node.contains(event.target as Element)) {
 			if (force) {
 				setTimeout(() => {
-					removeListener();
 					show = false;
 				}, 250);
 			}
 		} else {
-			removeListener();
 			show = false;
 		}
 	}

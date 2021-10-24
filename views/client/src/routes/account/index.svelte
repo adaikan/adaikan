@@ -24,7 +24,7 @@
 		mdiTagOutline,
 		mdiLogout,
 		mdiDeleteOutline,
-		mdiChevronLeft,
+		mdiCogOutline,
 		mdiChevronRight,
 		mdiAccountCircleOutline,
 	} from '@mdi/js';
@@ -76,7 +76,6 @@
 			],
 			action() {},
 		},
-		{ name: 'Notifikasi', icon: mdiBellOutline, sub: [], action() {} },
 		{
 			name: 'Pesanan Saya',
 			icon: mdiClipboardListOutline,
@@ -205,6 +204,14 @@
 				},
 			],
 			action() {},
+		},
+		{
+			name: 'Pengaturan',
+			icon: mdiCogOutline,
+			sub: [],
+			action() {
+				goto('/account/setting');
+			},
 		},
 		{
 			name: 'Keluar',
@@ -350,6 +357,9 @@
 			width: 100%;
 			height: 100%;
 			opacity: 0.7;
+		}
+		.s-list-item__title {
+			line-height: normal;
 		}
 	}
 </style>

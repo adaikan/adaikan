@@ -5,6 +5,7 @@
 	import { mediaQuery, ObserverUnsafe } from '$lib/helper';
 	import Token from '$lib/token';
 	import Api from '$lib/client-api';
+	import { Service } from '$lib/service-register';
 	import BuyerApi from '$apis/buyer';
 	import AddressApi from '$apis/buyer-address';
 	import CartApi from '$apis/cart';
@@ -17,7 +18,7 @@
 	import ChatApi from '$apis/chat';
 	import { BuyerClient } from '$lib/buyer';
 
-	export type { BuyerClient };
+	export type { BuyerClient, Service };
 
 	const token = new Token('buyer', { debug: dev });
 	const api = new Api({
@@ -50,11 +51,13 @@
 		chat: chatApi,
 	});
 	const is_desktop = new ObserverUnsafe(false);
+	const service = new Service({debug: dev});
 </script>
 
 <script>
 	setContext('buyer', buyer);
 	setContext('is_desktop', is_desktop);
+	setContext('service', service);
 	onMount(() => {
 		buyer.init();
 		mediaQuery('(min-width: 1200px)', (media) => {
@@ -63,6 +66,7 @@
 				is_desktop.set(media.matches);
 			});
 		});
+		service.init();
 	});
 </script>
 

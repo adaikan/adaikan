@@ -9,12 +9,19 @@
 		Card,
 	} from 'svelte-materialify/src';
 	import { mdiChevronLeft } from '@mdi/js';
-	import { goto } from '$app/navigation';
 	import { mdiEye, mdiEyeOff } from '@mdi/js';
-	import { onMount } from 'svelte';
+	import Alert from '$components/alert.svelte';
+
+	import { onMount, getContext } from 'svelte';
+
+	import { goto } from '$app/navigation';
+	import { session } from '$app/stores';
+
+	import type { BuyerClient } from '../../__layout.svelte';
 </script>
 
 <script lang="ts">
+	const user = getContext<BuyerClient>('buyer');
 	const rules = [
 		(value: string) => value.length > 3 || 'Min 4 characters',
 		(value: string) => value.length < 17 || 'Max 16 characters',
@@ -22,11 +29,45 @@
 	let showPassword = false;
 	let value = '';
 	let messages: string[] = [];
-	let valid = true;
 	let loading = true;
-	function submit() {}
+	let data = $session as { username: string; email: string };
+	let alert: Alert;
+
+	function reload(event: BeforeUnloadEvent) {
+		event.preventDefault();
+		event.returnValue =
+			'Ganti password sedang berlangsung jika anda mereload halaman maka ganti password akan gagal.';
+		return event.returnValue;
+	}
+	async function submit() {
+		try {
+			loading = true;
+			await user.api.buyer.resetPassword({
+				username: data.username,
+				email: data.email,
+				new_password: value,
+			});
+			await user.api.buyer.login({
+				username: data.username,
+				password: value,
+			});
+			$session = { email: data.email };
+			goto('/entry/reset/step-4', { replaceState: true });
+		} catch (error: any) {
+			alert.setState('error');
+			alert.setText(error.message);
+			alert.show();
+		} finally {
+			loading = false;
+		}
+	}
+
 	onMount(() => {
 		loading = false;
+		if (!data) {
+			throw new Error('Data not found');
+		}
+		window.addEventListener('beforeunload', reload, { capture: true });
 	});
 </script>
 
@@ -100,7 +141,7 @@
 
 <svelte:head>
 	<title>Atur Password</title>
-	<meta name="" content="" />
+	<meta name="description" content="Atur Password" />
 </svelte:head>
 
 <div>
@@ -125,13 +166,14 @@
 				<fieldset>
 					<div class="content">
 						<Card class="card" outlined>
+							<Alert bind:this="{alert}" />
 							<legend class="t-center">
 								<div class="f-16 f-500">Atur Password Kamu</div>
 								<div class="f-14">
 									<div>Buat password baru untuk</div>
-									<div class="f-500">reskiwahdaniah123@gmail.com.</div>
-								</div></legend
-							>
+									<div class="f-500">{data.email}</div>
+								</div>
+							</legend>
 							<TextField
 								class="textfield"
 								bind:value
@@ -151,15 +193,13 @@
 										class="grey-text text-darken-3"
 										path="{showPassword ? mdiEyeOff : mdiEye}"
 									/>
-								</div></TextField
-							>
+								</div>
+							</TextField>
 						</Card>
 						<div class="btns">
-							<Button
-								class="primary-color black-text"
-								on:click="{() => valid && goto('/entry/reset/step-4')}"
-								>berikutnya</Button
-							>
+							<Button class="primary-color black-text" type="submit"
+								>berikutnya
+							</Button>
 						</div>
 					</div>
 				</fieldset>

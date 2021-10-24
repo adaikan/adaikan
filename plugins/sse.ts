@@ -1,32 +1,66 @@
 import type {} from 'events';
-import type { FastifyPluginAsync, FastifyReply } from 'fastify';
+import type {
+	FastifyInstance,
+	FastifyPluginAsync,
+	FastifyReply,
+	FastifyRequest,
+} from 'fastify';
 import wrapper from 'fastify-plugin';
 import chalk from 'chalk';
 import { EventEmitter } from 'events';
 
 declare module 'fastify' {
+	interface FastifyInstance {
+		sse: SSE;
+	}
 	interface FastifyReply {
-		createEvent(): SSE;
+		createEvent(): SSEReply;
 	}
 }
 
-interface Options {}
+interface Options {
+	prefix?: string;
+}
 interface Plugin extends FastifyPluginAsync<Options> {}
 
-class SSE extends EventEmitter {
-	static connections = new Set<SSE>();
+class SSE {
+	static connections = new Set<SSEReply>();
+	public prefix;
+	constructor(private app: FastifyInstance, options?: { prefix?: string }) {
+		this.prefix = options?.prefix ?? '';
+	}
+	route(route: {
+		path: string;
+		handler: (
+			this: FastifyInstance,
+			request: FastifyRequest,
+			reply: SSEReply
+		) => void;
+	}) {
+		this.app.route({
+			url: this.prefix + route.path,
+			method: 'GET',
+			handler: (request, reply) => {
+				const sse_reply = new SSEReply(reply);
+				route.handler.call(this.app, request, sse_reply);
+			},
+		});
+	}
+}
+
+class SSEReply extends EventEmitter {
 	constructor(private reply: FastifyReply) {
 		super();
-
-		SSE.connections.add(this);
 
 		reply.raw.setHeader('Content-Type', 'text/event-stream');
 		reply.raw.setHeader('Connection', 'keep-alive');
 		reply.raw.setHeader('Cache-Control', 'no-cache');
 		reply.raw.write('\n');
 
+		SSE.connections.add(this);
+
 		reply.log.info(
-			chalk`{white Server Sent Event Connection} {yellow ${reply.request.method}:} {white ${reply.request.url}} {blue (${SSE.connections.size})}`
+			chalk`Server Sent Event Connection {yellow ${reply.request.method}:} {white ${reply.request.url}} {blue (${SSE.connections.size})} {magenta ${reply.request.ip}}`
 		);
 
 		reply.raw.on('error', (error) => {
@@ -35,10 +69,10 @@ class SSE extends EventEmitter {
 		reply.raw.once('close', () => {
 			SSE.connections.delete(this);
 			reply.log.info(
-				chalk`{white Server Sent Event Disconnection} {yellow ${reply.request.method}:} {green ${reply.statusCode} -} {white ${reply.request.url}} {blue (${SSE.connections.size})}`
+				chalk`Server Sent Event Disconnection {yellow ${reply.request.method}:} {green ${reply.statusCode} -} {white ${reply.request.url}} {blue (${SSE.connections.size})} {magenta ${reply.request.ip}}`
 			);
 			this.emit('close');
-			this.clear();
+			this.clean();
 		});
 	}
 	public send(
@@ -61,7 +95,7 @@ class SSE extends EventEmitter {
 		this.reply.raw.end(serialize({ end: chunk }));
 		return this;
 	}
-	public clear() {
+	public clean() {
 		setTimeout(() => {
 			this.reply.raw.removeAllListeners();
 			this.removeAllListeners();
@@ -72,8 +106,10 @@ class SSE extends EventEmitter {
 
 const name = 'sse';
 const plugin: Plugin = async (server, opts) => {
+	server.decorate(name, new SSE(server, { prefix: opts.prefix }));
 	server.decorateReply('createEvent', function (this: FastifyReply) {
-		return new SSE(this);
+		const reply = new SSEReply(this);
+		return reply;
 	});
 	server.addHook('onClose', () => {
 		for (const connection of SSE.connections) {

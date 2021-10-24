@@ -149,6 +149,16 @@
 					status: 'Process',
 				},
 			});
+			for (const item of order.item) {
+				client.product.update({
+					where: {
+						id: item.productId,
+					},
+					data: {
+						stock: { decrement: item.amount },
+					},
+				});
+			}
 			snackbar.setText('Pesanan disetujui');
 			snackbar.show();
 			await loader.sequencing();
@@ -499,7 +509,7 @@
 							{#each contact as item}
 								<ListItem
 									on:click="{() => {
-										goto('/store/chat/' + item.node);
+										goto('/store/chat?connectTo=' + item.node);
 									}}"
 								>
 									<div>{item.name}</div>

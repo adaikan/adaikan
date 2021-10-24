@@ -6,53 +6,24 @@
 		Icon,
 		Menu,
 		ListItem,
-		NavigationDrawer,
-		Avatar,
 		List,
-		ListItemGroup,
 		TextField,
 		Textarea,
-		Subheader,
-		Divider,
-		Overlay,
-		Card,
 		Chip,
 		Footer,
-		Badge,
-		CardActions,
-		CardSubtitle,
-		CardText,
-		CardTitle,
 	} from 'svelte-materialify/src';
-	import {
-		mdiMenu,
-		mdiViewDashboardOutline,
-		mdiDotsVertical,
-		mdiViewGridOutline,
-		mdiClipboardTextOutline,
-		mdiCached,
-		mdiCheck,
-		mdiTruckOutline,
-		mdiStorefrontOutline,
-		mdiCubeOutline,
-		mdiFishbowlOutline,
-		mdiAccountOutline,
-		mdiRefresh,
-		mdiMessageTextOutline,
-		mdiChevronLeft,
-	} from '@mdi/js';
-	import { mdiClipboardTextClockOutline } from '$lib/icons';
+	import { mdiMessageTextOutline, mdiChevronLeft } from '@mdi/js';
 	import ProgressLinear from '$components/progress-linear.svelte';
-	// import NoStore from '../_no-store-.svelte';
-	// import RejectDialog from '../_reject.svelte';
+	import RejectDialog from '../_reject.svelte';
 	import CartCard from '$components/cart-card.svelte';
 	import Snackbar from '$components/snackbar.svelte';
 
 	import { onMount, onDestroy, getContext } from 'svelte';
-	import { fade, slide, scale } from 'svelte/transition';
-	import { writable, derived } from 'svelte/store';
-	import { dev } from '$app/env';
+	import { slide } from 'svelte/transition';
+
 	import { goto } from '$app/navigation';
+	import { page, navigating } from '$app/stores';
+
 	import { Currency } from '$lib/helper';
 
 	import type { CourierClientApi } from '../__layout.svelte';
@@ -61,8 +32,6 @@
 </script>
 
 <script lang="ts">
-	import { page, navigating, session } from '$app/stores';
-
 	let courierClient = getContext<CourierClientApi>('courier');
 	let user: CourierClientApi.Courier;
 	let delivery: CourierClientApi.Delivery & {
@@ -80,8 +49,8 @@
 	};
 	let loader: ProgressLinear;
 	let snackbar: Snackbar;
+	let rejectDialog: RejectDialog;
 	let disableSubmit = false;
-	let isLoading = writable(true);
 	let contact: { name: string; telp: string; node: number }[] = [];
 
 	$: isLoading = loader?.active;
@@ -128,11 +97,11 @@
 				},
 			];
 
-			// rejectDialog.$on('decision', (event) => {
-			// 	if (event.detail == 'yes') {
-			// 		reject();
-			// 	}
-			// });
+			rejectDialog.$on('decision', (event) => {
+				if (event.detail == 'yes') {
+					reject();
+				}
+			});
 		} catch (error: any) {
 		} finally {
 			loader.loaded();
@@ -145,10 +114,11 @@
 	async function accept() {
 		try {
 			loader.loading();
-			snackbar.setText('Pesanan Terkirim');
-			snackbar.show();
 			disableSubmit = true;
 			const id = delivery.id;
+			if (!user.contracted) {
+				throw new Error("Kurir tidak terkontrak");
+			}
 			if (delivery.status == 'Queue') {
 				await courierClient.delivery.update({
 					where: { id },
@@ -199,7 +169,19 @@
 	async function reject() {
 		try {
 			loader.loading();
-			snackbar.setText('Pesanan ditolak');
+			await courierClient.delivery.update({
+				where: { id: delivery.id },
+				data: {
+					status: 'Reject',
+					courier: {
+						update: {
+							contracted: false,
+						},
+					},
+				},
+			});
+			snackbar.setText('Kontrak ditolak');
+			await init();
 		} catch (error: any) {
 			snackbar.setText(error.message);
 		} finally {
@@ -208,7 +190,7 @@
 		}
 	}
 	function requesReject() {
-		// rejectDialog.$set({ active: true });
+		rejectDialog.$set({ active: true });
 	}
 	async function downloader(src: string) {
 		return URL.createObjectURL(await courierClient.product.downloadImage(src));
@@ -554,7 +536,7 @@
 							{#each contact as item}
 								<ListItem
 									on:click="{() => {
-										goto('/courier/chat/' + item.node);
+										goto('/courier/chat?connectTo=' + item.node);
 									}}"
 								>
 									<div>{item.name}</div>
@@ -618,7 +600,6 @@
 			</div>
 		</Footer>
 		<Snackbar bind:this="{snackbar}" />
-		<!-- <NoStore bind:this="{noStore}" />
-		<RejectDialog bind:this="{rejectDialog}" /> -->
+		<RejectDialog bind:this="{rejectDialog}" />
 	</MaterialAppMin>
 </div>

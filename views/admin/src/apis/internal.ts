@@ -87,7 +87,7 @@ export default class InternalClientApi {
 	token: Token;
 	constructor(clientApi: ClientApi, token: Token) {
 		this.api = clientApi.clone({
-			path: 'internal',
+			path: '/internal',
 		});
 		this.token = token.clone();
 	}

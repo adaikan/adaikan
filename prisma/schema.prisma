@@ -196,7 +196,7 @@ model Cart {
 
   checked Boolean
 
-  buyerId Int
+  buyerId Int   @unique
   buyer   Buyer @relation(fields: [buyerId], references: [id])
 
   selectedItem SelectedItem[]
@@ -304,7 +304,7 @@ model Order {
   groupOrder   GroupOrder    @relation(fields: [groupOrderId], references: [id])
   storeId      Int
   store        Store         @relation(fields: [storeId], references: [id])
-  deliveryId   Int
+  deliveryId   Int           @unique
   delivery     Delivery      @relation(fields: [deliveryId], references: [id])
   buyerId      Int
   buyer        Buyer         @relation(fields: [buyerId], references: [id])
@@ -374,7 +374,7 @@ model Rating {
 
   buyerId Int
   buyer   Buyer @relation(fields: [buyerId], references: [id])
-  orderId Int
+  orderId Int   @unique
   order   Order @relation(fields: [orderId], references: [id])
 }
 
@@ -387,13 +387,15 @@ model ChatNode {
   image String          @default("")
   type  ChatChannelType @default(PerToPer)
 
-  channel     ChatChannel[]
-  chatMessage ChatMessage[]
+  channel         ChatChannel[]
+  outgoingMessage ChatMessage[] @relation("sender")
+  ingoingMessage  ChatMessage[] @relation("recipient")
 
-  internal Internal[]
-  buyer    Buyer[]
-  store    Store[]
-  courier  Courier[]
+  internal   Internal[]
+  buyer      Buyer[]
+  store      Store[]
+  courier    Courier[]
+  subscriber Subscriber[]
 }
 
 model ChatChannel {
@@ -408,23 +410,32 @@ model ChatChannel {
 model ChatMessage {
   id Int @id @default(autoincrement())
 
-  sentById Int
-  sentBy   ChatNode @relation(fields: [sentById], references: [id])
+  senderId  Int
+  sender    ChatNode   @relation("sender", fields: [senderId], references: [id])
+  recipient ChatNode[] @relation("recipient")
 
   replyForId Int?
-  replyFor   ChatMessage? @relation("ChatMessageToChatMessage", fields: [replyForId], references: [id])
+  replyFor   ChatMessage?  @relation("ChatMessageToChatMessage", fields: [replyForId], references: [id])
+  replied    ChatMessage[] @relation("ChatMessageToChatMessage")
 
-  sentAt    DateTime
+  sentAt    DateTime  @default(now())
   receiveAt DateTime?
   readAt    DateTime?
 
   image String?
   text  String  @db.Text
 
-  channelId Int?
-  channel   ChatChannel? @relation(fields: [channelId], references: [id])
+  channelId Int
+  channel   ChatChannel @relation(fields: [channelId], references: [id])
+}
 
-  chatMessage ChatMessage[] @relation("ChatMessageToChatMessage")
+model Subscriber {
+  id          Int      @id @default(autoincrement())
+  role        String
+  userId      Int
+  nodeId      Int      @unique
+  node        ChatNode @relation(fields: [nodeId], references: [id])
+  subcription Json
 }
 
 enum OrderStatus {

@@ -24,7 +24,9 @@
 	<List class="gap-2 px-4">
 		<ListItem>
 			<a href="{base}/dashboard" class="block">
-				<Item class="p-3 rounded-md {path.endsWith('/dashboard') ? 'bg-primary' : 'hover:bg-base-300'}">
+				<Item
+					class="p-3 rounded-md {path.endsWith('/dashboard') ? 'bg-primary' : 'hover:bg-base-300'}"
+				>
 					<svg
 						slot="start"
 						xmlns="http://www.w3.org/2000/svg"
@@ -38,21 +40,6 @@
 						/></svg
 					>
 					<div class="text-sm">Dashboard</div>
-				</Item>
-			</a>
-		</ListItem>
-		<ListItem>
-			<a href="{base}/analitycs" class="block">
-				<Item
-					class="p-3 rounded-md {path.endsWith('/analitycs') ? 'bg-primary' : 'hover:bg-base-300'}"
-				>
-					<svg slot="start" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" class="w-6 h-6"
-						><path
-							fill="currentColor"
-							d="M5,12a1,1,0,0,0-1,1v8a1,1,0,0,0,2,0V13A1,1,0,0,0,5,12ZM10,2A1,1,0,0,0,9,3V21a1,1,0,0,0,2,0V3A1,1,0,0,0,10,2ZM20,16a1,1,0,0,0-1,1v4a1,1,0,0,0,2,0V17A1,1,0,0,0,20,16ZM15,8a1,1,0,0,0-1,1V21a1,1,0,0,0,2,0V9A1,1,0,0,0,15,8Z"
-						/></svg
-					>
-					<div class="text-sm">Analitycs</div>
 				</Item>
 			</a>
 		</ListItem>
@@ -140,6 +127,49 @@
 						/></svg
 					>
 					<div class="text-sm">Chat</div>
+				</Item>
+			</a>
+		</ListItem>
+		<ListItem>
+			<a href="{base}/broadcast" class="block">
+				<Item
+					class="p-3 rounded-md {path.endsWith('/broadcast') ? 'bg-primary' : 'hover:bg-base-300'}"
+				>
+					<svg
+						slot="start"
+						class="w-6 h-6"
+						xmlns="http://www.w3.org/2000/svg"
+						data-name="Layer 1"
+						viewBox="0 0 24 24"
+						><path
+							fill="currentColor"
+							d="M19.99121,2.002a.99943.99943,0,0,0-1,1v.63672a9.03617,9.03617,0,0,1-7,3.36328h-6a3.00328,3.00328,0,0,0-3,3v2a3.00328,3.00328,0,0,0,3,3H6.475L4.07227,20.6084A.99931.99931,0,0,0,4.99121,22.002h4a.99857.99857,0,0,0,.91895-.60644L12.63391,15.04a9.02805,9.02805,0,0,1,6.3573,3.32507V19.002a1,1,0,0,0,2,0v-16A.99942.99942,0,0,0,19.99121,2.002Zm-14,11a1.00067,1.00067,0,0,1-1-1v-2a1.00068,1.00068,0,0,1,1-1h1v4Zm2.34082,7H6.50781l2.14258-5h1.82422ZM18.99121,15.5238a11.052,11.052,0,0,0-7-2.52185h-3v-4h3a11.05281,11.05281,0,0,0,7-2.52234Z"
+						/></svg
+					>
+					<div class="text-sm">Broadcast</div>
+				</Item>
+			</a>
+		</ListItem>
+		<ListItem>
+			<a href="{base}/folder" class="block">
+				<Item
+					class="p-3 rounded-md {path.endsWith('/folder') ? 'bg-primary' : 'hover:bg-base-300'}"
+				>
+					<svg
+						slot="start"
+						class="w-6 h-6"
+						fill="none"
+						stroke="currentColor"
+						viewBox="0 0 24 24"
+						xmlns="http://www.w3.org/2000/svg"
+						><path
+							stroke-linecap="round"
+							stroke-linejoin="round"
+							stroke-width="2"
+							d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"
+						/></svg
+					>
+					<div class="text-sm">Folder</div>
 				</Item>
 			</a>
 		</ListItem>

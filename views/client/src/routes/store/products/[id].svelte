@@ -7,48 +7,13 @@
 		TextField,
 		Textarea,
 		Select,
-		Radio,
-		Footer,
-		Menu,
-		ListItem,
-		NavigationDrawer,
-		Avatar,
-		List,
-		ListItemGroup,
-		Divider,
-		Overlay,
-		Badge,
-		CardActions,
-		CardSubtitle,
-		CardText,
-		CardTitle,
 	} from 'svelte-materialify/src';
-	import {
-		mdiMenu,
-		mdiViewDashboardOutline,
-		mdiDotsVertical,
-		mdiViewGridOutline,
-		mdiClipboardTextOutline,
-		mdiCached,
-		mdiCheck,
-		mdiTruckOutline,
-		mdiStorefrontOutline,
-		mdiCubeOutline,
-		mdiFishbowlOutline,
-		mdiAccountOutline,
-		mdiRefresh,
-		mdiPlus,
-		mdiChevronLeft,
-		mdiImagePlus,
-	} from '@mdi/js';
+	import { mdiChevronLeft, mdiImagePlus } from '@mdi/js';
 	import ProgressLinear from '$components/progress-linear.svelte';
 	import Snackbar from '$components/snackbar.svelte';
 
 	import { onMount, onDestroy, getContext } from 'svelte';
-	import { fade, slide, scale } from 'svelte/transition';
-	import { writable, derived } from 'svelte/store';
-	import { dev } from '$app/env';
-	import { goto } from '$app/navigation';
+	import { fade } from 'svelte/transition';
 	import { Diff, Currency } from '$lib/helper';
 
 	import type { SellerClientApi } from '../__layout.svelte';
@@ -65,10 +30,10 @@
 	import { page, navigating } from '$app/stores';
 
 	const client = getContext<SellerClientApi>('seller');
-	let seller: SellerClientApi.Data.Seller;
-	let store: SellerClientApi.Data.Store;
-	let product: SellerClientApi.Data.Product;
-	let copy: Partial<SellerClientApi.Data.Product>;
+	let seller: SellerClientApi.Seller;
+	let store: SellerClientApi.Store;
+	let product: SellerClientApi.Product;
+	let copy: Partial<SellerClientApi.Product>;
 	let loader: ProgressLinear;
 	let snackbar: Snackbar;
 	let loading = false;
@@ -82,7 +47,6 @@
 			loader.loading();
 		}
 	}
-
 	$: {
 		if (copy) {
 			const changed = Diff.object(copy, product);
@@ -166,10 +130,7 @@
 			loader.loaded();
 		}
 	}
-	function convert(
-		data: Partial<SellerClientApi.Data.Product>,
-		reverse = false
-	) {
+	function convert(data: Partial<SellerClientApi.Product>, reverse = false) {
 		if (reverse) {
 			if (data.price) {
 				data.price = Currency.toNumber(data.price as any) as any;
@@ -225,146 +186,6 @@
 		}
 	}
 </script>
-
-<svelte:head>
-	<title>{title}</title>
-	<meta name="" content="" />
-</svelte:head>
-
-<div transition:fade>
-	<MaterialAppMin>
-		<ProgressLinear bind:this="{loader}" />
-		<AppBar class="primary-color {loading ? 'top-4' : ''}">
-			<div slot="icon">
-				<Button
-					text
-					fab
-					size="small"
-					depressed
-					on:click="{() => history.back()}">
-					<Icon path="{mdiChevronLeft}" />
-				</Button>
-			</div>
-			<div slot="title">{title}</div>
-		</AppBar>
-		<main>
-			<form on:submit|preventDefault="{update}">
-				{#if product}
-					<fieldset>
-						<label class="thumb-wrapper">
-							<input type="file" accept="image/*" capture on:input="{onFile}" />
-							{#if imageUrl}
-								<img class="thumb" src="{imageUrl}" alt="{product.name}" />
-							{:else}
-								<Icon size="{56}" path="{mdiImagePlus}" />
-							{/if}
-						</label>
-					</fieldset>
-					<fieldset>
-						<TextField class="textfield" bind:value="{product.name}" required>
-							Nama Ikan*
-						</TextField>
-						<Textarea autogrow rows="{1}" bind:value="{product.description}">
-							Deskripsi Produk
-						</Textarea>
-						<TextField
-							class="textfield"
-							type="number"
-							step="0.1"
-							bind:value="{product.price}"
-							on:input="{onInput}"
-							required>
-							Harga*
-						</TextField>
-						<TextField
-							class="textfield"
-							type="number"
-							bind:value="{product.stock}"
-							required>
-							Jumlah/Ekor*
-						</TextField>
-						<div class="sub">
-							<TextField
-								class="textfield"
-								type="number"
-								bind:value="{product.weight}">
-								Berat
-							</TextField>
-							<Select
-								class="textfield"
-								items="{weightUnits}"
-								bind:value="{product.weightUnit}">
-								Satuan
-							</Select>
-						</div>
-						<Select
-							class="textfield"
-							items="{options}"
-							bind:value="{product.fresh}">
-							Segar
-						</Select>
-						<Select
-							class="textfield"
-							items="{options}"
-							bind:value="{product.forSale}">
-							Dijual
-						</Select>
-						<!-- <div class="radio">
-							<div class="label">Dijual</div>
-							<div class="group">
-								<Radio bind:group="{product.forSale}" value="{true}">Ya</Radio>
-								<Radio bind:group="{product.forSale}" value="{false}"
-									>Tidak</Radio>
-							</div>
-						</div> -->
-						<!-- <div class="radio">
-							<div class="label">Fresh</div>
-							<div class="group">
-								<Radio bind:group="{product.fresh}" value="{true}">Ya</Radio>
-								<Radio bind:group="{product.fresh}" value="{false}"
-									>Tidak</Radio>
-							</div>
-						</div> -->
-					</fieldset>
-					<fieldset class="btn">
-						<Button
-							type="submit"
-							class="{disableSubmit ? '' : 'primary-color'}"
-							disabled="{disableSubmit}">Perbarui</Button>
-						<Button
-							type="reset"
-							class="error-color error-text"
-							outlined
-							on:click="{del}">Hapus</Button>
-					</fieldset>
-				{:else}
-					<div class="thumb-wrapper">
-						<div class="thumb loading">&nbsp;</div>
-					</div>
-					<div class="textfield loading">&nbsp;</div>
-					<div class="textfield loading">&nbsp;</div>
-					<div class="textfield loading">&nbsp;</div>
-					<div class="textfield loading">&nbsp;</div>
-					<div class="sub">
-						<div class="textfield loading">&nbsp;</div>
-						<div class="textfield loading">&nbsp;</div>
-					</div>
-					<div class="textfield loading">&nbsp;</div>
-					<div class="textfield loading">&nbsp;</div>
-				{/if}
-			</form>
-		</main>
-		<!-- <Footer class="white elevation-5" paddless>
-			<div class="btn">
-				<Button class="primary-color" type="submit" form="update"
-					>Perbarui</Button>
-				<Button class="error-color error-text" outlined on:click="{del}"
-					>Hapus</Button>
-			</div>
-		</Footer> -->
-		<Snackbar bind:this="{snackbar}" />
-	</MaterialAppMin>
-</div>
 
 <style lang="scss">
 	@import '../../../components/common';
@@ -455,3 +276,128 @@
 		}
 	}
 </style>
+
+<svelte:head>
+	<title>{title}</title>
+	<meta name="" content="" />
+</svelte:head>
+
+<div transition:fade>
+	<MaterialAppMin>
+		<ProgressLinear bind:this="{loader}" />
+		<AppBar class="primary-color {loading ? 'top-4' : ''}">
+			<div slot="icon">
+				<Button
+					text
+					fab
+					size="small"
+					depressed
+					on:click="{() => history.back()}"
+				>
+					<Icon path="{mdiChevronLeft}" />
+				</Button>
+			</div>
+			<div slot="title">{title}</div>
+		</AppBar>
+		<main>
+			<form on:submit|preventDefault="{update}">
+				{#if product}
+					<fieldset>
+						<label class="thumb-wrapper">
+							<input type="file" accept="image/*" capture on:input="{onFile}" />
+							{#if imageUrl}
+								<img class="thumb" src="{imageUrl}" alt="{product.name}" />
+							{:else}
+								<Icon size="{56}" path="{mdiImagePlus}" />
+							{/if}
+						</label>
+					</fieldset>
+					<fieldset>
+						<TextField class="textfield" bind:value="{product.name}" required>
+							Nama Ikan*
+						</TextField>
+						<Textarea autogrow rows="{1}" bind:value="{product.description}">
+							Deskripsi Produk
+						</Textarea>
+						<TextField
+							class="textfield"
+							type="number"
+							step="0.1"
+							bind:value="{product.price}"
+							on:input="{onInput}"
+							required
+						>
+							Harga*
+						</TextField>
+						<TextField
+							class="textfield"
+							type="number"
+							bind:value="{product.stock}"
+							required
+						>
+							Jumlah/Ekor*
+						</TextField>
+						<div class="sub">
+							<TextField
+								class="textfield"
+								type="number"
+								bind:value="{product.weight}"
+							>
+								Berat
+							</TextField>
+							<Select
+								class="textfield"
+								items="{weightUnits}"
+								bind:value="{product.weightUnit}"
+							>
+								Satuan
+							</Select>
+						</div>
+						<Select
+							class="textfield"
+							items="{options}"
+							bind:value="{product.fresh}"
+						>
+							Segar
+						</Select>
+						<Select
+							class="textfield"
+							items="{options}"
+							bind:value="{product.forSale}"
+						>
+							Dijual
+						</Select>
+					</fieldset>
+					<fieldset class="btn">
+						<Button
+							type="submit"
+							class="{disableSubmit ? '' : 'primary-color'}"
+							disabled="{disableSubmit}">Perbarui</Button
+						>
+						<Button
+							type="reset"
+							class="error-color error-text"
+							outlined
+							on:click="{del}">Hapus</Button
+						>
+					</fieldset>
+				{:else}
+					<div class="thumb-wrapper">
+						<div class="thumb loading">&nbsp;</div>
+					</div>
+					<div class="textfield loading">&nbsp;</div>
+					<div class="textfield loading">&nbsp;</div>
+					<div class="textfield loading">&nbsp;</div>
+					<div class="textfield loading">&nbsp;</div>
+					<div class="sub">
+						<div class="textfield loading">&nbsp;</div>
+						<div class="textfield loading">&nbsp;</div>
+					</div>
+					<div class="textfield loading">&nbsp;</div>
+					<div class="textfield loading">&nbsp;</div>
+				{/if}
+			</form>
+		</main>
+		<Snackbar bind:this="{snackbar}" />
+	</MaterialAppMin>
+</div>

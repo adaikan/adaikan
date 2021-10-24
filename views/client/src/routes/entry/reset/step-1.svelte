@@ -9,11 +9,16 @@
 		Card,
 	} from 'svelte-materialify/src';
 	import { mdiChevronLeft } from '@mdi/js';
+	import { onMount, getContext } from 'svelte';
+
 	import { goto } from '$app/navigation';
-	import { onMount } from 'svelte';
+	import { session } from '$app/stores';
+
+	import type { BuyerClient } from '../../__layout.svelte';
 </script>
 
 <script lang="ts">
+	const user = getContext<BuyerClient>('buyer');
 	const emailRules = [
 		(value: string) => !!value || 'Required',
 		(value: string) => value.length <= 25 || 'Max 25 characters',
@@ -27,7 +32,17 @@
 	let messages: string[] = [];
 	let valid = true;
 	let loading = true;
-	function submit() {}
+	async function submit() {
+		try {
+			loading = true;
+			await user.api.buyer.generate(value);
+			$session = { email: value };
+			goto('/entry/reset/step-2', {replaceState: true});
+		} catch (error: any) {
+		} finally {
+			loading = false;
+		}
+	}
 	onMount(() => {
 		loading = false;
 	});
@@ -94,7 +109,7 @@
 
 <svelte:head>
 	<title>Masukkan Email</title>
-	<meta name="" content="" />
+	<meta name="description" content="Masukkan Email Lupa Password" />
 </svelte:head>
 
 <div>

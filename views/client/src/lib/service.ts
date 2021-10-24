@@ -1,73 +1,104 @@
 /// <reference no-default-lib="true"/>
 /// <reference lib="WebWorker" />
 
+import Client, { LocalStorage } from '$lib/client';
+import Api from '$lib/client-api';
+import { ES_URL, WS_URL, FETCH_MODE } from '$lib/env';
+
 type GlobalThis = typeof globalThis;
-type ServiceWorkerContext = ServiceWorkerGlobalScope & GlobalThis;
+type ServiceWorkerContext = ServiceWorkerGlobalScope &
+	GlobalThis &
+	GlobalDefined;
 type Method = 'GET' | 'POST' | 'DELETE' | 'PUT' | 'PATCH' | '*';
-type ResponseStrategy =
-	| 'revalidate'
-	| 'net-first'
-	| 'cache-first'
-	| 'net-only'
-	| 'cache-only';
+
+interface GlobalDefined {
+	RequestUtil: RequestUtil;
+	CacheUtil: CacheUtil;
+	Api: Api;
+}
 
 interface Route {
 	url: string | RegExp;
 	method: Method | Method[];
 	handler(request: Request, util: RouteUtil): Promise<Task>;
 }
+interface PluginRegister {
+	(instance: Service, context: ServiceWorkerContext): Promise<void> | void;
+}
 interface RouteUtil {
-	reply(): this;
+	send(): this;
 	notFound(): this;
 	error(): this;
 	redirect(): this;
 }
-interface Task {
-	timeout?: number;
-	retry_interval?: number;
-	retry_times?: number;
-	name?: string;
-	strategy?: ResponseStrategy;
-	expire?: number;
-}
+interface Task extends RequestUtilOptions, CachetUtilOptions {}
 interface Options {
 	debug: boolean;
 	cachename: string;
 	resources: string[];
+	enable_download?: boolean;
+	enable_clean?: boolean;
+	enable_proxy?: boolean;
 }
+type SyncEvent = ExtendableEvent & { tag: string };
+type PeriodicSyncEvent = ExtendableEvent & { tag: string };
 const default_options: Options = {
 	debug: true,
 	cachename: 'v1',
-	resources: ['index.html'],
+	resources: ['/'],
+	enable_clean: true,
+	enable_download: true,
+	enable_proxy: true,
 };
 const default_route: Route = {
-	url: /.*/g,
+	url: /.*/,
 	method: '*',
 	handler: async (request, util) => ({ strategy: 'net-only' }),
 };
 const context: ServiceWorkerContext = self as any;
+const local = new LocalStorage({ debug: false });
+const api = new Api({
+	base: '/',
+	esbase: ES_URL,
+	wsbase: WS_URL,
+	version: '',
+	mode: FETCH_MODE,
+	debug: false,
+});
 
 export default class Service {
 	public options: Options;
-
+	public channel = new BroadcastChannel('main_channel');
+	public client = new Client();
+	public local = local;
+	public api = api;
+	public wait = wait;
+	public promiseify = promiseify;
 	protected table_route_static = new Map<string, Route>();
 	protected table_route_dynamic = new Map<RegExp, Route>();
+	protected message_handlers = new Set<Function>();
 
 	constructor(options: Options) {
 		this.options = Object.seal(Object.assign({}, default_options, options));
+		this.client.init({ debug: this.options.debug });
+		this.local.init({ debug: this.options.debug });
+		this.api.options.debug = this.options.debug;
 	}
 	public async start() {
-		context.addEventListener('install', (event) => {
-			event.waitUntil(this.download());
-		});
-		context.addEventListener('activate', (event) => {
-			event.waitUntil(this.clean());
-		});
-		context.addEventListener('fetch', (event) => {
-			const result = this.proxying(event.request);
-			event.respondWith(result);
-			event.waitUntil(result);
-		});
+		this.options.enable_download &&
+			context.addEventListener('install', (event) => {
+				event.waitUntil(this.download());
+			});
+		this.options.enable_clean &&
+			context.addEventListener('activate', (event) => {
+				event.waitUntil(this.clean());
+			});
+		this.options.enable_proxy &&
+			context.addEventListener('fetch', (event) => {
+				const result = this.proxying(event.request);
+				event.respondWith(result);
+				event.waitUntil(result);
+			});
 		context.addEventListener('push', (event) => {
 			this.options.debug && console.log(event);
 		});
@@ -89,6 +120,43 @@ export default class Service {
 		context.addEventListener('unhandledrejection', (event) => {
 			this.options.debug && console.log(event);
 		});
+		this.channel.addEventListener('message', (event) => {
+			this.options.debug && console.log(event);
+			for (const handler of this.message_handlers) {
+				handler(event.data);
+			}
+		});
+	}
+	public onPeriodicSync(handler: (event: PeriodicSyncEvent) => any) {
+		context.addEventListener('periodicsync' as any, handler);
+		return this;
+	}
+	public onSync(handler: (event: SyncEvent) => any) {
+		context.addEventListener('sync' as any, handler);
+		return this;
+	}
+	public onPush(handler: (event: PushEvent) => any) {
+		context.addEventListener('push', handler);
+		return this;
+	}
+	public onMessage(
+		handler: (this: BroadcastChannel, event: MessageEvent) => any
+	) {
+		this.channel.addEventListener('message', handler);
+		return this;
+	}
+
+	public async send(message: any) {
+		this.channel.postMessage(message);
+		return this;
+	}
+	public async receive(handler: (message: any) => void) {
+		this.message_handlers.add(handler);
+		return this;
+	}
+	public async register(plugin: PluginRegister) {
+		await plugin(this, context);
+		return this;
 	}
 	public async route(route: Route) {
 		const method = route.method;
@@ -109,7 +177,7 @@ export default class Service {
 			if (method == '*') {
 				method_raw = '.*';
 			} else {
-				method_raw = method.join('|');
+				method_raw = `(${method.join('|')})`;
 			}
 			if (typeof url == 'string') {
 				this.table_route_dynamic.set(
@@ -128,57 +196,51 @@ export default class Service {
 		return this;
 	}
 
-	protected async download() {
+	public async download() {
 		const cache = await caches.open(this.options.cachename);
 		await cache.addAll(this.options.resources);
 		return context.skipWaiting();
 	}
-	protected async clean() {
+	public async clean() {
 		const keys = await caches.keys();
 		for (const key of keys) {
 			if (key != this.options.cachename) {
 				await caches.delete(key);
 			}
 		}
+		await local.del('cache-util');
 		return context.clients.claim();
 	}
-	protected async proxying(request: Request) {
+	public async proxying(request: Request) {
 		const route = this.lookup(request) ?? default_route;
 		const util: any = {};
 		const task = await route.handler(request, util);
-		if (task) {
-			const cache = await caches.open(task.name ?? this.options.cachename);
-			const req_util = new RequestUtil(task);
-			const res_util = new ResponseUtil();
+		const req_util = new RequestUtil(task);
+		const cache_util = new CacheUtil(task);
 
-			req_util.debug = this.options.debug;
-			res_util.debug = this.options.debug;
-			res_util.fetch = req_util.send.bind(req_util);
+		let response: Response | undefined;
 
+		req_util.debug = this.options.debug;
+		cache_util.debug = this.options.debug;
+		cache_util.fetch = req_util.send.bind(req_util);
+
+		this.options.debug &&
 			console.log(
 				'[route]',
 				`${request.method}:${request.url}`,
-				'<------>',
-				`${route.method}:${route.url}`,
-				'--------',
-				task.strategy,
+				'===',
+				`${route.method}:${route.url}`
 			);
 
-			if (task.strategy == 'revalidate') {
-				return res_util.revalidate(request, cache);
-			} else if (task.strategy == 'net-first') {
-				return res_util.netFirst(request, cache);
-			} else if (task.strategy == 'net-only') {
-				return res_util.netOnly(request);
-			} else if (task.strategy == 'cache-first') {
-				return res_util.cacheFirst(request, cache);
-			} else if (task.strategy == 'cache-only') {
-				return res_util.cacheOnly(cache, request);
-			}
+		try {
+			response = await cache_util.store(request);
+		} catch (error: any) {
+			this.options.debug && console.error(error);
 		}
+		if (response) return response;
 		return fetch(request);
 	}
-	protected lookup(request: Request) {
+	public lookup(request: Request) {
 		const str_url = request.url;
 		const str_method = request.method;
 		const req_address = `${str_method}:${str_url}`;
@@ -201,13 +263,28 @@ function wait<R = any>(timeout: number, handler: Function) {
 		}, timeout);
 	});
 }
+function promiseify<R = any>() {
+	let resolver: (value: R) => void = (v) => v;
+	let rejector: (reason: any) => void = (r) => r;
+	const promise = new Promise<R>((resolve, reject) => {
+		resolver = resolve;
+		rejector = reject;
+	});
+	return {
+		resolver,
+		rejector,
+		promise,
+	};
+}
 interface RequestUtilOptions {
 	timeout?: number;
+	online?: boolean;
 	retry_interval?: number;
 	retry_times?: number;
 }
 const request_util_default_options: RequestUtilOptions = {
 	timeout: 0,
+	online: true,
 	retry_interval: 0,
 	retry_times: 0,
 };
@@ -215,74 +292,124 @@ class RequestUtil {
 	static ERR_NET_OFFLINE = 'net::ERR_FAILED';
 	public debug = true;
 	public abort_controller = new AbortController();
-	public options: RequestUtilOptions;
+	public options: Required<RequestUtilOptions>;
+	protected sending = false;
 	protected retrying = false;
 	protected retry_count = 0;
 	protected retry_id: any = 0;
+	protected result = promiseify<Response>();
 	constructor(options?: RequestUtilOptions) {
-		this.options = Object.assign({}, request_util_default_options, options);
+		this.options = Object.assign(
+			{},
+			request_util_default_options,
+			options
+		) as any;
+		this.result.promise.finally(() => {
+			this.sending = false;
+			this.retrying = false;
+			this.retry_count = 0;
+			this.result = promiseify();
+		});
 	}
 	public async send(request: Request) {
-		this.debug && console.time('Send Request' + request.url);
-		let id: any = 0;
-		const new_request = new Request(request, {
-			signal: this.abort_controller.signal,
-		});
-		if (this.options.timeout) {
-			id = setTimeout(() => {
-				this.abort_controller.abort();
-			}, this.options.timeout);
-		}
-		try {
-			return await fetch(new_request);
-		} catch (error: any) {
-			this.debug && console.error(error);
-			if (error.message == RequestUtil.ERR_NET_OFFLINE) {
-				throw new TypeError(RequestUtil.ERR_NET_OFFLINE);
-			} else {
-				throw error;
+		if (!this.sending) {
+			this.debug &&
+				console.log('[req-util] sending', request.method, request.url);
+			const new_request = new Request(request, {
+				signal: this.abort_controller.signal,
+			});
+			try {
+				if (!context.navigator.onLine) {
+					throw new Error(RequestUtil.ERR_NET_OFFLINE);
+				}
+				this.sending = true;
+				let id: any = 0;
+				if (this.options.timeout) {
+					id = setTimeout(() => {
+						this.abort_controller.abort();
+					}, this.options.timeout);
+				}
+				const response = await fetch(new_request);
+				this.result.resolver(response);
+				id && clearTimeout(id);
+			} catch (error: any) {
+				this.debug && console.error(error);
+				if (!context.navigator.onLine && !this.options.online) {
+					this.result.rejector(error);
+				} else {
+					await this.retry(new_request, error);
+				}
+			} finally {
 			}
-		} finally {
-			clearTimeout(id);
-			this.debug && console.timeEnd('Send Request' + request.url);
 		}
+		return this.result.promise;
 	}
-	public retry(
-		request: Request,
-		onsuccess?: (response: Response) => void,
-		onfailed?: (error: any) => void
-	) {
-		if (this.retrying) {
-			return this;
+	public retry(request: Request, error?: Error) {
+		if (!this.options.retry_interval) {
+			this.result.rejector(error);
 		}
-		if (this.options.retry_interval) {
-			this.debug && console.time('Retry Request' + request.url);
+		if (!this.retrying) {
 			this.retrying = true;
-			this.retry_id = setInterval(() => {
-				this.send(request)
-					.then((response) => {
-						this.retrying = false;
+			this.retry_id = setInterval(async () => {
+				if (this.retry_count >= this.options.retry_times) {
+					this.result.rejector(error);
+					clearInterval(this.retry_id);
+				} else {
+					this.retry_count++;
+				}
+				console.log(
+					'[req-util] retrying',
+					this.retry_count,
+					'/',
+					this.options.retry_times,
+					'-',
+					this.options.retry_interval,
+					'/',
+					's',
+					request.url
+				);
+				try {
+					const response = await this.send(request);
+					this.result.resolver(response);
+					clearInterval(this.retry_id);
+				} catch (error: any) {
+					if (this.retry_count >= this.options.retry_times) {
+						this.result.rejector(error);
 						clearInterval(this.retry_id);
-						onsuccess?.(response);
-					})
-					.catch((error: any) => {
-						if (this.retry_count == this.options.retry_times) {
-							clearInterval(this.retry_id);
-							onfailed?.(error);
-						} else {
-							this.retry_count++;
-						}
-					})
-					.finally(() => {
-						this.debug && console.timeEnd('Retry Request' + request.url);
-					});
+					} else {
+						this.retry_count++;
+					}
+				} finally {
+				}
 			}, this.options.retry_interval);
 		}
-		return this;
+		return this.result.promise;
 	}
 }
-class ResponseUtil {
+interface CachetUtilOptions {
+	cache_name?: string;
+	strategy:
+		| 'revalidate'
+		| 'net-first'
+		| 'cache-first'
+		| 'net-only'
+		| 'cache-only';
+	expire?: number;
+}
+interface CacheExpiration {
+	keys: {
+		[name: string]: number;
+	};
+}
+const cache_util_default_options: CachetUtilOptions = {
+	cache_name: 'cache-util',
+	strategy: 'revalidate',
+	expire: 0,
+};
+class CacheUtil {
 	public debug = true;
+	public key = 'cache-util';
+	public options: Required<CachetUtilOptions>;
 	public cacheOptions: CacheQueryOptions = {
 		ignoreMethod: false,
 		ignoreSearch: false,
@@ -292,14 +419,86 @@ class ResponseUtil {
 		status: 404,
 		statusText: 'Not Found',
 	});
+	constructor(options?: CachetUtilOptions) {
+		this.options = Object.assign(
+			{},
+			cache_util_default_options,
+			options
+		) as any;
+	}
 	public notFound() {
 		return this.not_found.clone();
 	}
 	public fetch(request: Request) {
 		return fetch(request);
 	}
+	public async store(request: Request) {
+		this.expiration(this.options);
+		const { strategy, cache_name } = this.options;
+		if (strategy == 'revalidate') {
+			const cache = await caches.open(cache_name);
+			return this.revalidate(request, cache);
+		} else if (strategy == 'net-first') {
+			const cache = await caches.open(cache_name);
+			return this.netFirst(request, cache);
+		} else if (strategy == 'net-only') {
+			return this.netOnly(request);
+		} else if (strategy == 'cache-first') {
+			const cache = await caches.open(cache_name);
+			return this.cacheFirst(request, cache);
+		} else if (strategy == 'cache-only') {
+			const cache = await caches.open(cache_name);
+			return this.cacheOnly(cache, request);
+		}
+	}
+	public async expiration({ cache_name, expire }: Required<CachetUtilOptions>) {
+		let data = await local.get<CacheExpiration>(this.key);
+		if (!data) {
+			data = { keys: {} };
+		}
+		const now = Date.now();
+		for (const [name, time] of Object.entries(data.keys)) {
+			if (time <= now) {
+				caches.delete(name);
+				delete data.keys[name];
+				this.debug &&
+					console.log(
+						'[cache-util] expiration',
+						new Date(time).toLocaleString(),
+						'-',
+						(now - time) / 1e3,
+						'/s',
+						'=',
+						name
+					);
+			}
+		}
+		if (!expire) return;
+		if (!cache_name) return;
+		if (!data.keys[cache_name]) {
+			const time = now + expire;
+			data.keys[cache_name] = now + expire;
+			this.debug &&
+				console.log(
+					'[cache-util] expiration on',
+					new Date(time).toLocaleString(),
+					'-',
+					cache_name
+				);
+		}
+		await local.set(this.key, data);
+		return;
+	}
 	public async revalidate(request: Request, cache: Cache) {
-		let response = await cache.match(request, this.cacheOptions);
+		this.debug &&
+			console.log(
+				'[cache-util] strategy',
+				this.options.strategy,
+				'>',
+				'revalidate',
+				request.url
+			);
+		let response = await this.loadCache(cache, request);
 		if (response) {
 			this.waitPutCache(cache, request);
 		} else {
@@ -309,6 +508,14 @@ class ResponseUtil {
 		return response;
 	}
 	public netFirst(request: Request, cache: Cache) {
+		this.debug &&
+			console.log(
+				'[cache-util] strategy',
+				this.options.strategy,
+				'>',
+				'net-first',
+				request.url
+			);
 		return this.fetch(request)
 			.then((response) => {
 				if (response.ok) {
@@ -323,10 +530,26 @@ class ResponseUtil {
 			});
 	}
 	public async netOnly(request: Request) {
+		this.debug &&
+			console.log(
+				'[cache-util] strategy',
+				this.options.strategy,
+				'>',
+				'net-only',
+				request.url
+			);
 		return this.fetch(request);
 	}
 	public async cacheFirst(request: Request, cache: Cache) {
-		let response = await cache.match(request, this.cacheOptions);
+		this.debug &&
+			console.log(
+				'[cache-util] strategy',
+				this.options.strategy,
+				'>',
+				'cache-first',
+				request.url
+			);
+		let response = await this.loadCache(cache, request);
 		if (!response) {
 			response = await this.fetch(request);
 			this.waitPutCache(cache, request, response.clone());
@@ -334,7 +557,15 @@ class ResponseUtil {
 		return response;
 	}
 	public cacheOnly(cache: Cache, request: Request) {
-		return cache.match(request, this.cacheOptions).then((response) => {
+		this.debug &&
+			console.log(
+				'[cache-util] strategy',
+				this.options.strategy,
+				'>',
+				'cache-only',
+				request.url
+			);
+		return this.loadCache(cache, request).then((response) => {
 			if (response) {
 				return response;
 			} else {
@@ -342,8 +573,11 @@ class ResponseUtil {
 			}
 		});
 	}
+	public loadCache(cache: Cache, request: Request) {
+		return cache.match(request, this.cacheOptions);
+	}
 	public waitPutCache(cache: Cache, request: Request, response?: Response) {
-		return wait(16, async () => {
+		return wait(0, async () => {
 			if (!response) {
 				response = await this.fetch(request);
 			}

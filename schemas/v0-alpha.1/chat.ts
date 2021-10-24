@@ -4,10 +4,12 @@ export type {
   CreateContact,
   GetChannel,
   Message,
-  SendMessage,
   ChatReceiveFormat,
   ChatSendFormat,
   ChatNode,
   ChatChannel,
   ChatMessage,
+  HasContact,
+  Join,
+  Connect,
 } from '../../features/chat';

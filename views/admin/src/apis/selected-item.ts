@@ -77,7 +77,7 @@ export default class SelectedItemClientApi {
 	token: Token;
 	constructor(clientApi: ClientApi, token: Token) {
 		this.api = clientApi.clone({
-			path: 'selected-item',
+			path: '/selected-item',
 		});
 		this.token = token.clone();
 	}

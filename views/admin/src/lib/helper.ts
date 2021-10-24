@@ -196,9 +196,9 @@ export function mix<T extends object, K extends object>(source: T, target: K) {
 	}
 }
 
-export function genRandomNumber(length: number = 0) {
+export function genRandomNumber(length: number = 16) {
 	return +Math.random()
-		.toFixed()
+		.toPrecision()
 		.slice(2, length + 2);
 }
 
@@ -333,6 +333,9 @@ export function mediaQuery(query: string, handler: (media: MediaQueryList) => vo
 export class Diff {
 	static array<A extends Array<any>, R = A>(imutable: A, mutable: A): R | undefined {
 		const result: R = [] as unknown as R;
+		if (imutable.length < mutable.length) {
+			[mutable, imutable] = [imutable, mutable];
+		}
 		for (const [key, i_value] of Object.entries(imutable)) {
 			let m_value = mutable[key] as any;
 			if (typeof i_value == typeof m_value) {
@@ -367,6 +370,9 @@ export class Diff {
 		mutable: O
 	): R | undefined {
 		const result: R = {} as unknown as R;
+		if (Object.keys(imutable).length < Object.keys(mutable).length) {
+			[mutable, imutable] = [imutable, mutable];
+		}
 		for (const [key, i_value] of Object.entries(imutable)) {
 			let m_value = mutable[key as unknown as keyof O] as any;
 			if (typeof i_value == typeof m_value) {
@@ -400,7 +406,7 @@ export class Diff {
 		return unsafeDuplicate(original);
 	}
 	static objectAssign<O extends object>(unchanged: O, changed: O): O {
-		return Object.assign(unchanged, changed);
+		return Object.assign(unchanged, unsafeDuplicate(changed));
 	}
 }
 export function toMoney(value: any) {

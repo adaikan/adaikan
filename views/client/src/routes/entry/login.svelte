@@ -13,8 +13,10 @@
 	import { mdiEye, mdiEyeOff, mdiChevronLeft } from '@mdi/js';
 
 	import { onMount, onDestroy, getContext } from 'svelte';
+
 	import { fade } from 'svelte/transition';
 	import { goto } from '$app/navigation';
+	import { page } from '$app/stores';
 
 	import type { Context } from './__layout.svelte';
 	import type { ObserverUnsafe } from '$lib/helper';
@@ -27,7 +29,7 @@
 	let loader: ProgressLinear;
 	let username = '';
 	let password = '';
-	let role = '';
+	let role = $page.query.get('role') ?? 'buyer';
 	let showPassword = false;
 	let disableSubmit = false;
 	let as = [
@@ -68,11 +70,14 @@
 					username,
 					password,
 				});
+				role = 'store';
 			} else if (role == 'courier') {
 				await user.courier.login({
 					username,
 					password,
 				});
+			} else {
+				throw new Error("Unknown Role");
 			}
 			alert.setState('success');
 			alert.setText('Berhasil Masuk');
@@ -304,7 +309,7 @@
 							<div class="t-end f-14">
 								<a
 									class="{$is_desktop ? 'black-text' : 'white-text'}"
-									href="/entry/reset">Lupa Password?</a
+									href="/entry/reset/step-1">Lupa Password?</a
 								>
 							</div>
 						</div>

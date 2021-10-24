@@ -13,7 +13,9 @@ import type {
 } from 'project/global';
 
 import type { Stat, Data, User, Slide } from 'schemas/v0-alpha.1/admin';
+import type { Multipart, MultipartFields } from 'fastify-multipart';
 
+import { spawn, ChildProcess } from 'child_process';
 import fs from 'fs-extra';
 import path from 'path';
 import faker from 'faker';
@@ -21,12 +23,10 @@ import bcrypt from 'bcrypt';
 import sharp from 'sharp';
 import chalk from 'chalk';
 import { ansiToHtml } from 'anser';
-// @ts-ignore
-import ansi from 'ansi-html-stream';
-import { on, EventEmitter } from 'events';
+import { EventEmitter } from 'events';
 import Api from 'utility/api';
-import { spawn, ChildProcess } from 'child_process';
-import { Multipart, MultipartFields } from 'fastify-multipart';
+import { Data as DataUtility } from 'utility/data';
+import { FileStorage } from 'utility/storage';
 
 const route: FastifyPluginAsync = async (server, opts) => {
 	const {
@@ -39,30 +39,66 @@ const route: FastifyPluginAsync = async (server, opts) => {
 	} = process as Env<typeof EnvJson>;
 	const api = 'admin';
 	const version = 'v0-alpha.1';
-	const { jwt, orm, rbac, totp, event, wss } = server;
+	const { jwt, orm, rbac, totp, event, wss, sse } = server;
 	const model = [
 		'buyer',
 		'seller',
 		'courier',
 		'internal',
-		'cart',
-		'selected-item',
-		'group-order',
-		'delivery',
-		'ordered-item',
+		'subscriber',
 		'order',
 		'store',
 		'product',
+		'delivery',
+		'cart',
+		'selected-item',
+		'group-order',
+		'ordered-item',
 	];
 	const modelEvent = new EventEmitter();
-	const imagePath = path.join(SERVER_PUBLIC_DIR, 'images');
-	const imageStatic = path.join(SERVER_STATIC_PATH, 'images');
+	const slide_image_path = path.join(SERVER_PUBLIC_DIR, 'slides');
+	const slide_image_static_path = path.join(SERVER_STATIC_PATH, 'slides');
+	const file_storage = new FileStorage({ root: SERVER_PUBLIC_DIR });
 	const dataPath = path.join(PROJECT_ROOT_DIR, 'data.json');
-	const data: Data = await loadData();
+	const data_store = DataUtility.create<Data>({
+		path: dataPath,
+		schema: {
+			business: {
+				type: 'object',
+				props: {
+					productPriceIncrease: 'number',
+					productPriceIncreaseActive: 'boolean',
+					deliveryCostCalculatePerDistance: 'number',
+					deliveryCostCalculatePerDistanceActive: 'boolean',
+					deliveryCostCalculatePerWeight: 'number',
+					deliveryCostCalculatePerWeightActive: 'boolean',
+				},
+			},
+			model: {
+				type: 'object',
+				props: {
+					open: 'boolean',
+					openBy: 'string',
+					openAt: 'string',
+					link: 'string',
+				},
+			},
+			slides: {
+				type: 'array',
+				items: {
+					type: 'object',
+					props: {
+						id: 'number',
+						src: 'string',
+						href: 'string',
+					},
+				},
+			},
+		},
+		verbose: false,
+	});
 
-	await fs.mkdir(imagePath, { recursive: true });
-
-	let studio: ChildProcess | null = null;
+	await fs.mkdir(slide_image_path, { recursive: true });
 
 	for (const table of model) {
 		event.on(`model:${table}:change`, (args: any) => {
@@ -73,15 +109,14 @@ const route: FastifyPluginAsync = async (server, opts) => {
 		});
 	}
 
-	server.route({
-		url: `/${api}`,
-		method: 'GET',
-		handler: (request, reply) => {
-			const event = reply.createEvent();
+	sse.route({
+		path: `/${api}`,
+		handler: async (request, reply) => {
+			const user = await request.identify('internal');
 			modelEvent.on('change', listener);
-			event.once('close', () => modelEvent.removeListener('change', listener));
+			reply.once('close', () => modelEvent.removeListener('change', listener));
 			function listener(arg: any) {
-				event.send('message', arg);
+				reply.send('message', arg);
 			}
 		},
 	});
@@ -96,6 +131,7 @@ const route: FastifyPluginAsync = async (server, opts) => {
 			const courier = await orm.courier.count();
 			const order = await orm.order.count();
 			const product = await orm.product.count();
+			const subscriber = await orm.subscriber.count();
 			const orderCost = await orm.order.aggregate({
 				_sum: {
 					cost: true,
@@ -121,6 +157,7 @@ const route: FastifyPluginAsync = async (server, opts) => {
 				order,
 				product,
 				sales,
+				subscriber,
 			});
 		},
 		schema: {},
@@ -131,6 +168,7 @@ const route: FastifyPluginAsync = async (server, opts) => {
 		method: 'GET',
 		handler: async (request, reply) => {
 			const user = await request.identify('internal');
+			const data = await data_store.load();
 			reply.ok(data.business);
 		},
 		schema: {},
@@ -143,10 +181,10 @@ const route: FastifyPluginAsync = async (server, opts) => {
 		method: 'PATCH',
 		handler: async (request, reply) => {
 			const user = await request.identify('internal');
+			const data = await data_store.load();
 			data.business = request.body;
-			await saveData(data);
-			reply.created(data.business);
-			event.emit('data:changed', data);
+			await data_store.save();
+			reply.ok(data.business);
 		},
 		schema: {},
 	});
@@ -156,6 +194,7 @@ const route: FastifyPluginAsync = async (server, opts) => {
 		method: 'GET',
 		handler: async (request, reply) => {
 			const user = await request.identify('internal');
+			const data = await data_store.load();
 			reply.ok(data.model);
 		},
 		schema: {},
@@ -168,47 +207,7 @@ const route: FastifyPluginAsync = async (server, opts) => {
 		method: 'PATCH',
 		handler: async (request, reply) => {
 			const user = await request.identify('internal');
-			const result = await orm.internal.findUnique({
-				where: { id: user.sub },
-			});
-			if (!result) {
-				throw Api.Error.FailedAuthentication('Unknown User');
-			}
-			if (request.body.open) {
-				studio = startStudio();
-
-				studio.on('spawn', async () => {
-					console.log(studio);
-
-					data.model.open = true;
-					data.model.link = '/server/orm';
-					data.model.openBy = result.username;
-					data.model.openAt = new Date().toISOString();
-
-					await saveData(data);
-
-					reply.created(data.model);
-					event.emit('data:changed', data);
-				});
-			} else {
-				studio?.on('close', async () => {
-					console.log(studio);
-
-					data.model.open = false;
-					data.model.link = '';
-					data.model.openBy = '';
-					data.model.openAt = '';
-
-					await saveData(data);
-
-					reply.created(data.model);
-					event.emit('data:changed', data);
-
-					studio = null;
-				});
-				studio?.kill();
-			}
-			return reply;
+			reply.ok();
 		},
 		schema: {},
 	});
@@ -218,37 +217,57 @@ const route: FastifyPluginAsync = async (server, opts) => {
 		method: 'GET',
 		handler: async (request, reply) => {
 			const user = await request.identify('internal');
+			const data = await data_store.load();
+			reply.ok(data.slides);
+		},
+		schema: {},
+	});
+	server.route<{
+		Body: Slide[];
+	}>({
+		url: `/${api}/slide`,
+		method: 'PATCH',
+		handler: async (request, reply) => {
+			const user = await request.identify('internal');
+			const data = await data_store.load();
+
+			for (const slide of data.slides) {
+				const pass = request.body.some((item) => item.id == slide.id);
+				if (!pass) {
+					await fs.remove(
+						path.join(slide_image_path, path.basename(slide.src))
+					);
+				}
+			}
+
+			data.slides = request.body;
+
+			await data_store.save();
+
 			reply.ok(data.slides);
 		},
 		schema: {},
 	});
 	server.route<{}>({
-		url: `/${api}/slide`,
-		method: 'PATCH',
+		url: `/${api}/slide/image`,
+		method: 'POST',
 		handler: async (request, reply) => {
 			const user = await request.identify('internal');
-			const files = request.files();
-			const slides: Slide[] = [];
+			const data = await data_store.load();
 
-			await fs.emptyDir(imagePath);
-
-			for await (const data of files) {
-				const { link } = data.fields as MultipartFields & {
-					link: Multipart<string>[];
-				};
-				const id = data.fieldname;
-				const filename = path.join( id + path.extname(data.filename));
-				slides.push({
-					id: +id,
-					src: path.join(imageStatic, filename),
-					link: link[+id].value,
-				});
-				data.file.pipe(fs.createWriteStream(path.join(imagePath, filename)));
+			for await (const part of request.files()) {
+				const id = +part.fieldname;
+				const filename = path.join(id + path.extname(part.filename));
+				part.file.pipe(
+					fs.createWriteStream(path.join(slide_image_path, filename))
+				);
+				const slide = data.slides.find((slide) => slide.id == id) as any;
+				if (slide) {
+					slide.src = path.join(slide_image_static_path, filename);
+				}
 			}
 
-			data.slides = slides as any;
-
-			await saveData(data);
+			await data_store.save();
 
 			reply.ok();
 		},
@@ -484,17 +503,41 @@ const route: FastifyPluginAsync = async (server, opts) => {
 	});
 
 	server.route<{}>({
-		url: `/${api}/log`,
+		url: `/${api}/subscribers`,
 		method: 'GET',
 		handler: async (request, reply) => {
 			const user = await request.identify('internal');
+			const subscribers = await orm.subscriber.findMany();
+			reply.ok(subscribers);
+		},
+		schema: {},
+	});
+	server.route<{
+		Params: { id: string };
+	}>({
+		url: `/${api}/unsubscribe/:id`,
+		method: 'DELETE',
+		handler: async (request, reply) => {
+			const user = await request.identify('internal');
+			const subscriber = await orm.subscriber.delete({
+				where: { id: +request.params.id },
+			});
+			reply.ok(subscriber);
+			event.emit('model:subscriber:change', subscriber);
+		},
+		schema: {},
+	});
+
+	sse.route({
+		path: `/${api}/log`,
+		handler: async (request, reply) => {
+			const user = await request.identify('internal');
 			const dir = path.join(SERVER_LOGS_DIR, 'server.log');
-			const event = reply.createEvent();
 			const buffer = await fs.readFile(dir);
 
 			fs.watchFile(dir, listener);
 
-			event
+			reply
 				.once('close', () => {
 					fs.unwatchFile(dir, listener);
 				})
@@ -511,13 +554,21 @@ const route: FastifyPluginAsync = async (server, opts) => {
 				fs.createReadStream(dir, { start: prev.size })
 					.on('data', (chunk) => (text += chunk))
 					.once('close', () => {
-						event.send('data', { tag: 'continue', data: ansiToHtml(text) });
+						reply.send('data', { tag: 'continue', data: ansiToHtml(text) });
 					});
 			}
 		},
+	});
+	server.route<{}>({
+		url: `/${api}/log`,
+		method: 'GET',
+		handler: async (request, reply) => {
+			const user = await request.identify('internal');
+			const dir = path.join(SERVER_LOGS_DIR, 'server.log');
+			reply.download(dir);
+		},
 		schema: {},
 	});
-
 	server.route<{}>({
 		url: `/${api}/log`,
 		method: 'DELETE',
@@ -530,22 +581,49 @@ const route: FastifyPluginAsync = async (server, opts) => {
 		schema: {},
 	});
 
-	function saveData(data: Data) {
-		return fs.writeFile(dataPath, JSON.stringify(data, null, '\t'));
-	}
-	async function loadData() {
-		const buf = await fs.readFile(dataPath);
-		return JSON.parse(buf.toString());
-	}
-	function startStudio() {
-		return spawn('npm run db:preview', [], {
-			cwd: PROJECT_ROOT_DIR,
-			shell: true,
-			stdio: 'inherit',
-			detached: true,
-			timeout: 60 * 5,
-		});
-	}
+	server.route<{
+		Body: {};
+	}>({
+		url: `/${api}/folder`,
+		method: 'GET',
+		handler: async (request, reply) => {
+			const user = await request.identify('internal');
+			const tree = await file_storage.dir_tree(
+				SERVER_PUBLIC_DIR,
+				SERVER_STATIC_PATH
+			);
+			reply.ok(tree);
+		},
+		schema: {},
+	});
+	server.route<{
+		Params: { '*': string };
+	}>({
+		url: `/${api}/folder/public/*`,
+		method: 'POST',
+		handler: async (request, reply) => {
+			const user = await request.identify('internal');
+			const dir_file = await file_storage.save_file(request.raw, {
+				path: request.params['*'],
+				href: SERVER_STATIC_PATH,
+			});
+
+			reply.created(dir_file);
+		},
+		schema: {},
+	});
+	server.route<{
+		Params: { '*': string };
+	}>({
+		url: `/${api}/folder/public/*`,
+		method: 'DELETE',
+		handler: async (request, reply) => {
+			const user = await request.identify('internal');
+			const result = await file_storage.remove_file(request.params['*']);
+			reply.ok(result);
+		},
+		schema: {},
+	});
 };
 
 export default route;

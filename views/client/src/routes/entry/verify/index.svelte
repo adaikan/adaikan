@@ -3,16 +3,17 @@
 		MaterialAppMin,
 		ProgressLinear,
 		Button,
-		TextField,
 		AppBar,
 		Icon,
 		Card,
 	} from 'svelte-materialify/src';
 	import { mdiChevronLeft } from '@mdi/js';
 	import Alert from '$components/alert.svelte';
+
+	import { onMount, getContext } from 'svelte';
+
 	import { goto } from '$app/navigation';
 	import { session } from '$app/stores';
-	import { onMount, getContext } from 'svelte';
 
 	import type { BuyerClient } from '../../__layout.svelte';
 </script>
@@ -27,7 +28,7 @@
 	let loading = true;
 	let email = $session.email;
 	let alert: Alert;
-	let disableSubmit = false;
+	let disableSubmit = true;
 
 	function reset() {
 		pin = Array(6);
@@ -41,7 +42,7 @@
 	}
 	function onInput(this: HTMLInputElement) {
 		if (this.value.length) {
-			this.value = this.value[0];
+			pin[+this.id] = +this.value.slice(-1);
 			(this.nextElementSibling as HTMLElement)?.focus();
 		}
 	}
@@ -105,6 +106,7 @@
 	}
 	onMount(() => {
 		loading = false;
+		disableSubmit = true;
 		window.addEventListener('beforeunload', reload, { capture: true });
 	});
 </script>
@@ -191,7 +193,7 @@
 
 <svelte:head>
 	<title>Verifikasi Email</title>
-	<meta name="" content="" />
+	<meta name="description" content="Verifikasi Email" />
 </svelte:head>
 
 <div>
@@ -223,14 +225,14 @@
 								<div>Mohon verifikasi.</div>
 							</legend>
 							<div class="pin">
-								{#each pinChar as char, index}
+								{#each pinChar as char}
 									<input
-										autofocus="{index == 0}"
+										autofocus="{char == 0}"
+										id="{char + ''}"
 										class="input"
 										type="number"
+										value="{pin[char]}"
 										required
-										bind:this="{inputs[char]}"
-										bind:value="{pin[index]}"
 										on:input="{onInput}"
 									/>
 								{/each}

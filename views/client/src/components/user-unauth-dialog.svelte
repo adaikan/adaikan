@@ -22,7 +22,7 @@
 		<CardText>Untuk mengakses halaman ini di perlukan akun.</CardText>
 		<CardActions>
 			<Button on:click="{() => goto(`${basepath}/entry/register`, {replaceState: true})}" text>Mendaftar</Button>
-			<Button on:click="{() => goto(`${basepath}/entry/login`, {replaceState: true})}" text class="primary-text"
+			<Button on:click="{() => goto(`/entry/login`, {replaceState: true})}" text class="primary-text"
 				>Masuk</Button>
 		</CardActions>
 	</Card>

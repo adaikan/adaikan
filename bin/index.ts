@@ -33,22 +33,11 @@ const cli = new CLI()
 			['vapid-key']: {
 				description: 'Generate Vapid key',
 				action: (prams, options) => {
-					spawn('npm run key-pair', [], {
-						shell: true,
-						stdio: 'inherit',
-					}).once('close', (code, signal) => {
-						if (code) {
-							console.log(
-								chalk.bgBlack.white`Generate Vapid key`,
-								chalk.red`[Failed]`
-							);
-						} else {
-							console.log(
-								chalk.bgBlack.white`Generate Vapid key`,
-								chalk.green`[Success]`
-							);
-						}
-					});
+					KeyPair.vapid({ verbose: options.verbose });
+					console.log(
+						chalk.bgBlack.white`Generate Vapid key`,
+						chalk.green`[Success]`
+					);
 				},
 			},
 		},
@@ -267,6 +256,7 @@ const cli = new CLI()
 								link: '',
 							},
 							slides: [],
+							subscription: [],
 							config: {
 								lockModel: false,
 							},
@@ -331,8 +321,30 @@ const cli = new CLI()
 				},
 			},
 			push: {
+				description: 'Push Database to Schema ORM',
 				action: (params, options) => {
-					cli.showHelp();
+					child_process.db_preview = spawn('prisma db push', [], {
+						shell: true,
+						stdio: 'inherit',
+					})
+						.once('spawn', () => {
+							console.log(chalk.bgBlack.white`Push Database spawned`);
+						})
+						.once('close', (code, signal) => {
+							if (code) {
+								console.log(
+									chalk.bgBlack.white`Push Database`,
+									chalk.red`[Failed]`,
+									chalk.blue`${code}`
+								);
+							} else {
+								console.log(
+									chalk.bgBlack.white`Push Database`,
+									chalk.green`[Success]`,
+									chalk.blue`${code}`
+								);
+							}
+						});
 				},
 			},
 			pull: {

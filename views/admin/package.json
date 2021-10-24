@@ -7,6 +7,7 @@
 		"node": "14.18.0"
 	},
 	"scripts": {
+		"start": "HOST=0.0.0.0 PORT=3050 node build/index.js",
 		"dev": "svelte-kit dev --port 3050",
 		"build": "svelte-kit build",
 		"preview": "svelte-kit preview --port 3050",
@@ -17,18 +18,18 @@
 		"tailwind:dev": "npx tailwindcss -w -i ./src/styles/tailwind.css -o ./static/tailwind.css"
 	},
 	"devDependencies": {
-		"@sveltejs/kit": "^1.0.0-next.184",
+		"@sveltejs/kit": "^1.0.0-next.189",
 		"@tailwindcss/forms": "^0.3.4",
 		"@tailwindcss/typography": "^0.4.1",
 		"@types/cookie": "^0.4.1",
 		"autoprefixer": "^10.3.6",
 		"cssnano": "^5.0.8",
 		"dotenv": "^10.0.0",
-		"postcss": "^8.3.6",
+		"postcss": "^8.3.11",
 		"postcss-load-config": "^3.1.0",
 		"prettier": "^2.4.1",
 		"prettier-plugin-svelte": "^2.4.0",
-		"sass": "^1.43.2",
+		"sass": "^1.43.3",
 		"svelte": "^3.44.0",
 		"svelte-check": "^2.2.6",
 		"svelte-preprocess": "^4.9.7",
@@ -46,6 +47,6 @@
 		"@tailwindcss/aspect-ratio": "^0.2.1",
 		"@themesberg/flowbite": "^1.0.4",
 		"cookie": "^0.4.1",
-		"daisyui": "^1.14.5"
+		"daisyui": "^1.16.0"
 	}
 }

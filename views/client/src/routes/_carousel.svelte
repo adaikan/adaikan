@@ -5,7 +5,7 @@
 </script>
 
 <script lang="ts">
-	export let slides: { src: string; link: string; loaded?: boolean }[] = [];
+	export let slides: { src: string; href: string; loaded?: boolean }[] = [];
 	export let desktop = false;
 </script>
 
@@ -82,7 +82,7 @@
 		{:else}
 			<Carousel autoplay pauseOnFocus dots arrows="{desktop}">
 				{#each slides as slide}
-					<a href="{slide.link}" class="link">
+					<a href="{slide.href}" class="link">
 						<img
 							class="img {slide.loaded ? '' : 'loading'}"
 							src="{slide.src}"
