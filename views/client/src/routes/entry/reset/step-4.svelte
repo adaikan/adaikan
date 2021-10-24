@@ -3,30 +3,27 @@
 		MaterialAppMin,
 		ProgressLinear,
 		Button,
-		TextField,
 		AppBar,
 		Icon,
 		Card,
 	} from 'svelte-materialify/src';
 	import { mdiChevronLeft, mdiCheckCircleOutline } from '@mdi/js';
-	import { goto } from '$app/navigation';
-	import { mdiEye, mdiEyeOff } from '@mdi/js';
+
 	import { onMount } from 'svelte';
+
+	import { goto } from '$app/navigation';
+	import { session } from '$app/stores';
 </script>
 
 <script lang="ts">
-	const rules = [
-		(value: string) => value.length > 3 || 'Min 4 characters',
-		(value: string) => value.length < 17 || 'Max 16 characters',
-	];
-	let showPassword = false;
-	let value = '';
-	let messages: string[] = [];
-	let valid = true;
 	let loading = true;
-	function submit() {}
+	let email = $session.email;
+
 	onMount(() => {
 		loading = false;
+		if (!email) {
+			throw new Error('Email not found');
+		}
 	});
 </script>
 
@@ -100,7 +97,7 @@
 
 <svelte:head>
 	<title>Berhasil</title>
-	<meta name="" content="" />
+	<meta name="description" content="Berhasil Reset Password" />
 </svelte:head>
 
 <div>
@@ -121,7 +118,7 @@
 			<span slot="title">Reset Password</span>
 		</AppBar>
 		<main>
-			<form class="surface" on:submit|preventDefault="{submit}">
+			<form class="surface">
 				<fieldset>
 					<div class="content">
 						<Card class="card" outlined>
@@ -137,15 +134,17 @@
 								<div class="f-14">
 									<div>
 										Berhasil mengatur ulang password untuk akun dengan email <span
-											class="f-500">reskiwahdaniah123@gmail.com.</span
+											class="f-500">{email}</span
 										>
 									</div>
 								</div></legend
 							>
 						</Card>
 						<div class="btns">
-							<Button class="primary-color black-text" on:click="{() => valid}"
-								>selesai</Button
+							<Button
+								class="primary-color black-text"
+								on:click="{() => goto('/', { replaceState: true })}"
+								>Beranda</Button
 							>
 						</div>
 					</div>

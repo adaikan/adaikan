@@ -9,16 +9,28 @@
 		Card,
 	} from 'svelte-materialify/src';
 	import { mdiChevronLeft } from '@mdi/js';
+	import Alert from '$components/alert.svelte';
+
+	import { onMount, getContext } from 'svelte';
+
 	import { goto } from '$app/navigation';
-	import { onMount } from 'svelte';
+	import { session } from '$app/stores';
+
+	import type { BuyerClient } from '../../__layout.svelte';
 </script>
 
 <script lang="ts">
-	let loading = true;
+	const user = getContext<BuyerClient>('buyer');
 	const pinChar = [0, 1, 2, 3, 4, 5];
-	let inputs: HTMLInputElement[] = [];
+
+	let loading = true;
+	let pin: number[] = Array(6);
 	let second = 0;
 	let id = reset();
+	let email = $session.email;
+	let alert: Alert;
+	let disableSubmit = true;
+
 	function reset() {
 		second = 40;
 		return setInterval(() => {
@@ -30,12 +42,74 @@
 	}
 	function onInput(this: HTMLInputElement) {
 		if (this.value.length) {
-			this.value = this.value.slice(-1);
+			pin[+this.id] = +this.value.slice(-1);
 			(this.nextElementSibling as HTMLElement)?.focus();
 		}
 	}
+	async function generate() {
+		try {
+			if (second == 0) {
+				await user.api.buyer.generate(email);
+			}
+		} catch (error: any) {
+			alert.setState('error');
+			alert.setText(error.message);
+			alert.show();
+		}
+	}
+	async function verify() {
+		try {
+			loading = true;
+			disableSubmit = true;
+
+			if (pin.length != pinChar.length) {
+				throw new Error('Pin tidak mencukupi');
+			}
+			for (const char of pin) {
+				if (typeof char != 'number') {
+					throw new Error('Pin kosong');
+				}
+			}
+
+			const result = await user.api.buyer.verify_reset({
+				email,
+				otp: pin.join(''),
+			});
+
+			if (result) {
+				alert.setState('success');
+				alert.setText('Berhasil Verifikasi');
+				alert.show();
+
+				window.removeEventListener('beforeunload', reload, { capture: true });
+
+				$session = result;
+
+				goto('/entry/reset/step-3', { replaceState: true });
+			}
+		} catch (error: any) {
+			alert.setState('error');
+			alert.setText(error.message);
+			alert.show();
+
+			disableSubmit = false;
+		} finally {
+			loading = false;
+		}
+	}
+	function reload(event: BeforeUnloadEvent) {
+		event.preventDefault();
+		event.returnValue =
+			'Ganti password sedang berlangsung jika anda mereload halaman maka ganti password akan gagal.';
+		return event.returnValue;
+	}
 	onMount(() => {
 		loading = false;
+		if (!email) {
+			throw new Error('Email not found');
+		}
+		disableSubmit = false;
+		window.addEventListener('beforeunload', reload, { capture: true });
 	});
 </script>
 
@@ -120,7 +194,7 @@
 
 <svelte:head>
 	<title>Verifikasi Email</title>
-	<meta name="" content="" />
+	<meta name="description" content="Verifikasi Email Lupa Password" />
 </svelte:head>
 
 <div>
@@ -141,36 +215,47 @@
 			<span slot="title">Reset Password</span>
 		</AppBar>
 		<main>
-			<form class="surface">
+			<form on:submit|preventDefault="{verify}" class="surface">
 				<fieldset>
 					<div class="content">
 						<Card class="card" outlined>
+							<Alert bind:this="{alert}" />
 							<legend class="f-500 t-center"
 								><div>Kode verifikasi telah dikirimkan melalui</div>
-								<div class="red-text darken-1">reskiwahdaniah123@gmail.com</div>
+								<div class="red-text darken-1">{email}</div>
 								<div>Mohon verifikasi.</div></legend
 							>
 							<div class="pin">
 								{#each pinChar as char}
 									<input
+										autofocus="{char == 0}"
+										id="{char + ''}"
 										class="input"
 										type="number"
-										bind:this="{inputs[char]}"
+										value="{pin[char]}"
+										required
 										on:input="{onInput}"
 									/>
 								{/each}
 							</div>
 						</Card>
 						<div class="btns">
-							<Button class="primary-color black-text">verifikasi</Button>
+							<Button
+								disabled="{disableSubmit}"
+								type="submit"
+								class="primary-color black-text">verifikasi</Button
+							>
 							{#if second}
 								<div class="t-center">
 									Mohon tunggu <span>{second}</span> detik untuk mengirim ulang.
 								</div>
 							{:else}
 								<Button
+									disabled="{disableSubmit}"
 									class="black-text"
+									type="reset"
 									on:click="{() => {
+										generate();
 										id = reset();
 									}}">Kirim Ulang</Button
 								>
