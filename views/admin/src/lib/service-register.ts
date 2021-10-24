@@ -1,8 +1,6 @@
 import ClientApi from './client-api';
 import ClientStore from './client';
 
-import type { WebPushPayload } from '$server/global';
-
 type BeforeInstallPromptEvent = Event & {
 	userChoice: Promise<any>;
 	prompt: () => Promise<string>;
@@ -42,7 +40,7 @@ export class Service {
 		});
 		this.clientApi = new ClientApi({
 			base: location.origin + '/server/push',
-			debug: this.options?.debug
+			debug: this.options?.debug,
 		});
 		this.client = new ClientStore({ debug: this.options?.debug }).init();
 	}
@@ -85,7 +83,7 @@ export class Service {
 				registration = await navigator.serviceWorker.register(url, {
 					type: 'module',
 					scope: '.',
-					updateViaCache: 'imports'
+					updateViaCache: 'imports',
 				});
 			} else {
 				registration = await navigator.serviceWorker.ready;
@@ -95,7 +93,9 @@ export class Service {
 				console.log('[Service] service worker updatefound');
 				this.options?.debug && console.log(event);
 			});
-			const relateds = await (navigator as CustomNavigator)?.getInstalledRelatedApps();
+			const relateds = await (
+				navigator as CustomNavigator
+			)?.getInstalledRelatedApps();
 			console.log('[Service] Related App');
 			this.options?.debug && console.log(relateds);
 		}
@@ -105,31 +105,43 @@ export class Service {
 		await registration.unregister();
 		return this;
 	}
-	public async subscribe(data: { role: string; username: string }) {
+	public async subscribe(data: {
+		role: string;
+		userId: number;
+		nodeId: number;
+	}) {
 		const service = await navigator.serviceWorker.ready;
 		let subscription = await service.pushManager.getSubscription();
 		if (!subscription) {
-			const response = await this.clientApi.request({ endpoint: 'key' }).send<string>();
+			const response = await this.clientApi
+				.request({ endpoint: 'key' })
+				.send<string>();
+			const key = urlBase64ToUint8Array(await response.read());
 			subscription = await service.pushManager.subscribe({
 				userVisibleOnly: true,
-				applicationServerKey: urlBase64ToUint8Array(await response.read())
+				applicationServerKey: key,
 			});
+			const body = {
+				role: data.role,
+				userId: data.userId,
+				nodeId: data.nodeId,
+				subscription,
+			};
 			await this.clientApi
 				.request({
 					endpoint: 'subs',
 					method: 'POST',
-					body: {
-						role: data.role,
-						username: data.username,
-						subscription
-					}
+					body,
 				})
 				.send();
 		}
 		this.options?.debug && console.log(subscription);
 		return this;
 	}
-	public async unsubscribe(data: { role: string; username: string }) {
+	public registered() {
+		return !!navigator.serviceWorker.controller;
+	}
+	public async unsubscribe(data: { nodeId: number }) {
 		const service = await navigator.serviceWorker.ready;
 		const subscription = await service.pushManager.getSubscription();
 		if (subscription) {
@@ -137,7 +149,7 @@ export class Service {
 				.request({
 					endpoint: 'unsubs',
 					method: 'DELETE',
-					body: data
+					body: data,
 				})
 				.send();
 			await subscription.unsubscribe();
@@ -149,30 +161,20 @@ export class Service {
 		const subscription = await service.pushManager.getSubscription();
 		return !!subscription;
 	}
-	public async broadcast(data: WebPushPayload) {
-		await this.clientApi
-			.request({
-				endpoint: 'broadcast',
-				method: 'POST',
-				body: data
-			})
-			.send();
-		return this;
-	}
 	public async update() {
 		const service = await navigator.serviceWorker.ready;
 		await service.update();
 		return this;
 	}
 	public async sync(tag: string) {
-		const service = (await navigator.serviceWorker.ready) as ServiceWorkerRegistration &
-			SyncManager;
+		const service = (await navigator.serviceWorker
+			.ready) as ServiceWorkerRegistration & SyncManager;
 		await service?.sync.register(tag);
 		return this;
 	}
 	public async periodic(tag: string, options: { minInterval: number }) {
-		const service = (await navigator.serviceWorker.ready) as ServiceWorkerRegistration &
-			PeriodicSyncManager;
+		const service = (await navigator.serviceWorker
+			.ready) as ServiceWorkerRegistration & PeriodicSyncManager;
 		try {
 			await service?.periodicSync.register(tag, options);
 		} catch (error: any) {

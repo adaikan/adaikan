@@ -6,8 +6,16 @@ import Api from '$lib/client-api';
 import { ES_URL, WS_URL, FETCH_MODE } from '$lib/env';
 
 type GlobalThis = typeof globalThis;
-type ServiceWorkerContext = ServiceWorkerGlobalScope & GlobalThis;
+type ServiceWorkerContext = ServiceWorkerGlobalScope &
+	GlobalThis &
+	GlobalDefined;
 type Method = 'GET' | 'POST' | 'DELETE' | 'PUT' | 'PATCH' | '*';
+
+interface GlobalDefined {
+	RequestUtil: RequestUtil;
+	CacheUtil: CacheUtil;
+	Api: Api;
+}
 
 interface Route {
 	url: string | RegExp;
@@ -64,6 +72,8 @@ export default class Service {
 	public client = new Client();
 	public local = local;
 	public api = api;
+	public wait = wait;
+	public promiseify = promiseify;
 	protected table_route_static = new Map<string, Route>();
 	protected table_route_dynamic = new Map<RegExp, Route>();
 	protected message_handlers = new Set<Function>();
@@ -167,7 +177,7 @@ export default class Service {
 			if (method == '*') {
 				method_raw = '.*';
 			} else {
-				method_raw = method.join('|');
+				method_raw = `(${method.join('|')})`;
 			}
 			if (typeof url == 'string') {
 				this.table_route_dynamic.set(
@@ -186,21 +196,22 @@ export default class Service {
 		return this;
 	}
 
-	protected async download() {
+	public async download() {
 		const cache = await caches.open(this.options.cachename);
 		await cache.addAll(this.options.resources);
 		return context.skipWaiting();
 	}
-	protected async clean() {
+	public async clean() {
 		const keys = await caches.keys();
 		for (const key of keys) {
 			if (key != this.options.cachename) {
 				await caches.delete(key);
 			}
 		}
+		await local.del('cache-util');
 		return context.clients.claim();
 	}
-	protected async proxying(request: Request) {
+	public async proxying(request: Request) {
 		const route = this.lookup(request) ?? default_route;
 		const util: any = {};
 		const task = await route.handler(request, util);
@@ -229,7 +240,7 @@ export default class Service {
 		if (response) return response;
 		return fetch(request);
 	}
-	protected lookup(request: Request) {
+	public lookup(request: Request) {
 		const str_url = request.url;
 		const str_method = request.method;
 		const req_address = `${str_method}:${str_url}`;
@@ -450,15 +461,16 @@ class CacheUtil {
 			if (time <= now) {
 				caches.delete(name);
 				delete data.keys[name];
-				this.debug && console.log(
-					'[cache-util] expiration',
-					new Date(time).toLocaleString(),
-					'-',
-					(now - time) / 1e3,
-					'/s',
-					'=',
-					name
-				);
+				this.debug &&
+					console.log(
+						'[cache-util] expiration',
+						new Date(time).toLocaleString(),
+						'-',
+						(now - time) / 1e3,
+						'/s',
+						'=',
+						name
+					);
 			}
 		}
 		if (!expire) return;
