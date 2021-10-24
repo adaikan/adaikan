@@ -24,35 +24,34 @@ export type HasContact = {
 export type GetChannel = {
 	nodeId: number;
 };
-export type SendMessage = {
-	channelId: number;
-	nodeId: number;
-	message: Message;
+export type Message = ChatMessage.Data & {
+	sender: ChatNode.Data;
+	recipient: ChatNode.Data[];
+	replyFor: ChatMessage.Data | null;
 };
-export type Message = {
-	text: string;
-	image: string | null;
-};
+export type Join = { from: number; to: number; channel: Channel[] };
 export type Channel = {
 	id: number;
 	nodeId: number;
 	name: string;
 	image: string;
-	type: ChatChannel.Type,
-	message: (ChatMessage.Data & {
-		sentBy: ChatNode.Data;
-		replyFor: ChatMessage.Data | null;
-	})[];
+	type: ChatChannel.Type;
+	message: Message[];
 };
 export type ToClientChannel = ChatNode.Data & {
 	channel: (ChatChannel.Data & {
 		message: (ChatMessage.Data & {
-			sentBy: ChatNode.Data;
+			sender: ChatNode.Data;
+			recipient: ChatNode.Data[];
 			replyFor: ChatMessage.Data | null;
 		})[];
 		node: ChatNode.Data[];
 	})[];
 };
+export type Connect = {
+	nodeId: number;
+	channel: Channel[];
+}
 export type ChatSendFormat<D = any> = {
 	tag: 'message' | 'join' | 'connect';
 	data: D;
@@ -120,15 +119,20 @@ export default class ChatFeature {
 				},
 				where: { id: theirContact.channel[0].id },
 				include: {
-					message: { include: { sentBy: true, replyFor: true } },
+					message: {
+						include: { sender: true, recipient: true, replyFor: true },
+					},
 					node: true,
 				},
 			});
 			event.emit('join', {
 				from: myConntact.id,
 				to: theirContact.id,
-				channel: await this.toClientChannel({ ...theirContact, channel: [result] }),
-			});
+				channel: await this.toClientChannel({
+					...theirContact,
+					channel: [result],
+				}),
+			} as Join);
 			return result;
 		} else {
 			const result = await this.channel.create({
@@ -136,15 +140,20 @@ export default class ChatFeature {
 					node: { connect: [{ id: myConntact.id }, { id: theirContact.id }] },
 				},
 				include: {
-					message: { include: { sentBy: true, replyFor: true } },
+					message: {
+						include: { sender: true, recipient: true, replyFor: true },
+					},
 					node: true,
 				},
 			});
 			event.emit('join', {
 				from: myConntact.id,
 				to: theirContact.id,
-				channel: await this.toClientChannel({ ...theirContact, channel: [result] }),
-			});
+				channel: await this.toClientChannel({
+					...theirContact,
+					channel: [result],
+				}),
+			} as Join);
 			return result;
 		}
 	}
@@ -155,7 +164,9 @@ export default class ChatFeature {
 				channel: {
 					include: {
 						node: true,
-						message: { include: { sentBy: true, replyFor: true } },
+						message: {
+							include: { recipient: true, sender: true, replyFor: true },
+						},
 					},
 				},
 			},
@@ -197,16 +208,5 @@ export default class ChatFeature {
 			}
 		}
 		return channels;
-	}
-	send({ channelId, message, nodeId }: SendMessage) {
-		return this.message.create({
-			data: {
-				sentAt: new Date(),
-				text: message.text,
-				image: message.image,
-				sentById: nodeId,
-				channelId,
-			},
-		});
 	}
 }

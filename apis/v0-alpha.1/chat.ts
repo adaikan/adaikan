@@ -8,6 +8,7 @@ import type {
 	ToOptional,
 	RequestBodyFile,
 	ToDownload,
+	WebPushPayload,
 } from 'project/global';
 
 import type {
@@ -16,18 +17,22 @@ import type {
 	CreateContact,
 	GetChannel,
 	Message,
-	SendMessage,
-	ChatNode,
-	ChatChannel,
 	ChatMessage,
+	Join,
 } from 'schemas/v0-alpha.1/chat';
 
 import Api from 'utility/api';
 
-import Chat, { ChatReceiveFormat, ChatSendFormat } from 'features/chat';
+import Chat, {
+	ChatReceiveFormat,
+	ChatSendFormat,
+	Connect,
+} from 'features/chat';
+import { ChatChannelModel } from 'models/chat-channel';
 import { ChatMessageModel } from 'models/chat-message';
+import { SubscriberModel } from 'models/subscriber';
 import { FileStorage } from 'utility/storage';
-import EventEmitter from 'events';
+import webpush from 'web-push';
 
 const route: FastifyPluginAsync = async (server, opts) => {
 	const {
@@ -40,48 +45,94 @@ const route: FastifyPluginAsync = async (server, opts) => {
 	const IMAGE_STATIC = FileStorage.path.join(SERVER_STATIC_PATH, api, 'image');
 	const image = new FileStorage({ root: IMAGE_DIR });
 	const chat = new Chat(orm);
+	const modelChannel = new ChatChannelModel(orm);
 	const modelMessage = new ChatMessageModel(orm);
+	const modelSubscriber = new SubscriberModel(orm);
 	const channels = wss.getChannels();
 	const address = wss.createAddress();
 
 	await image.init();
 
-	chat.event.on('message', (message: ChatMessage.Data) => {
+	chat.event.on('message', async (message: Message) => {
 		const data = JSON.stringify({
 			tag: 'message',
 			data: message,
 			status: 'success',
 		} as ChatReceiveFormat);
-		channels.broadcast({ key: message.channelId + '', data });
-	});
-	chat.event.on(
-		'join',
-		(data: { from: number; to: number; channel: Channel[] }) => {
-			const channel = data.channel[0];
-			const message = JSON.stringify({
-				tag: 'join',
-				data: channel,
-				status: 'success',
-			} as ChatReceiveFormat);
-			if (channel.type == 'PerToGroup') {
-				channels.broadcast({ key: channel.id + '', data: message });
-			} else {
-				address.broadcast({ address: data.to + '', data: message });
+		const channel = channels.broadcast({ key: message.channelId + '', data });
+		if (channel) {
+			const chat_channel = await modelChannel.get({
+				where: { id: +channel.key },
+				include: { node: true },
+				rejectOnNotFound: true,
+			});
+			const node: number[] = [];
+			for (const recipient of chat_channel.node) {
+				node.push(recipient.id);
+			}
+			const connected: number[] = [];
+			for (const id of channel.meta.values()) {
+				connected.push(id);
+			}
+			const push: number[] = [];
+			for (const id of node) {
+				if (!connected.includes(id)) {
+					push.push(id);
+				}
+			}
+			for (const id of push) {
+				const subscriber = await modelSubscriber.search({
+					where: { nodeId: id },
+				});
+				if (subscriber) {
+					const link =
+						subscriber.role == 'buyer'
+							? '/chat'
+							: '/' + subscriber.role + '/chat';
+					const payload: WebPushPayload = {
+						tag: 'chat',
+						href: link,
+						subscribers: [],
+						message,
+						notifications: {} as any,
+					};
+					try {
+						await webpush.sendNotification(
+							subscriber.subcription as any,
+							JSON.stringify(payload)
+						);
+					} catch (error: any) {
+						server.log.error(error);
+						await modelSubscriber.delete({ where: { id: subscriber.id } });
+					}
+				}
 			}
 		}
-	);
+	});
+	chat.event.on('join', (data: Join) => {
+		const channel = data.channel[0];
+		const message = JSON.stringify({
+			tag: 'join',
+			data: channel,
+			status: 'success',
+		} as ChatReceiveFormat);
+		if (channel.type == 'PerToGroup') {
+			channels.broadcast({ key: channel.id + '', data: message });
+		} else {
+			address.broadcast({ address: data.to + '', data: message });
+		}
+	});
 
 	wss.route({
 		path: `/${version}/${api}`,
 		handler: async (ws, channels) => {
 			ws.on('message', async (data, binary) => {
-				const message: ChatSendFormat<{ id: number; channel: Channel[] }> =
-					JSON.parse(data.toString());
+				const message: ChatSendFormat<Connect> = JSON.parse(data.toString());
 				if (message.tag == 'connect') {
 					const { data } = message;
-					address.set(data.id + '', ws);
+					address.set(data.nodeId + '', ws);
 					for (const channel of data.channel) {
-						channels.addClientToChannel(channel.id + '', ws);
+						channels.addClientToChannel(channel.id + '', ws, data.nodeId);
 					}
 				}
 			});
@@ -106,8 +157,6 @@ const route: FastifyPluginAsync = async (server, opts) => {
 		url: `/${api}/create`,
 		method: 'POST',
 		handler: async (request, reply) => {
-			// const result = await chat.createContact(request.body);
-			// reply.ok(result);
 			reply.notImplemented();
 		},
 		schema: {},
@@ -133,7 +182,7 @@ const route: FastifyPluginAsync = async (server, opts) => {
 		handler: async (request, reply) => {
 			const data = await modelMessage.create({
 				data: request.body.data,
-				include: { sentBy: true, replyFor: true },
+				include: { sender: true, recipient: true, replyFor: true },
 			});
 			reply.accept({});
 			chat.event.emit('message', data);
