@@ -4,7 +4,6 @@
 		Button,
 		Icon,
 		Divider,
-		Badge,
 		TextField,
 	} from 'svelte-materialify/src';
 	import {
@@ -20,6 +19,10 @@
 	import { onMount, onDestroy, getContext } from 'svelte';
 	import { slide, scale } from 'svelte/transition';
 
+	import { page } from '$app/stores';
+
+	import logo from '$static/logo.png';
+
 	import type { ObserverUnsafe } from '$lib/helper';
 	import type { BuyerClient } from '../__layout.svelte';
 </script>
@@ -27,13 +30,14 @@
 <script lang="ts">
 	const client = getContext<BuyerClient>('buyer');
 	const is_desktop = getContext<ObserverUnsafe<boolean>>('is_desktop');
+	const wsclient = client.api.chat.ws();
 	let buyer: BuyerClient.Buyer;
 	let snackbar: Snackbar;
 	let contact: BuyerClient.Chat.Contact | undefined;
-	let contacts: BuyerClient.Chat.Contact[] = [];
+	let channels: BuyerClient.Chat.Contact[] = [];
 	let findContacts: BuyerClient.Chat.Contact[] = [];
 	let fakeContact = Array(4);
-	let unsubscribers: Function[] = [];
+	let connectTo = $page.query.get('connectTo');
 	let progress: ProgressLinear;
 	let searchText = '';
 	let messageText = '';
@@ -59,33 +63,36 @@
 		try {
 			await client.ready;
 			buyer = await client.auth();
-			contacts = await client.api.chat.getContacts({
+			connectTo &&
+				(await client.api.chat.connectContact({
+					myId: buyer.chatNodeId,
+					theirId: +connectTo,
+				}));
+			channels = await client.api.chat.getContacts({
 				nodeId: buyer.chatNodeId,
 			});
 			fakeContact = Array(0);
-
-			let ws = client.api.chat.ws();
-			ws.connect({ id: buyer.chatNodeId, channel: contacts });
-
-			unsubscribers[0] = await ws.onMessage((message) => {
+			wsclient.connect({ nodeId: buyer.chatNodeId, channel: channels });
+			wsclient.onMessage((message) => {
 				if (contact && contact.id == message.channelId) {
 					contact.message.push(message);
 					contact = contact;
 				} else {
-					contacts
+					channels
 						.find((contact) => contact.id == message.channelId)
 						?.message.push(message);
-					contacts = contacts;
+					channels = channels;
 				}
 				if (
 					document.visibilityState == 'hidden' &&
 					Notification.permission == 'granted'
 				) {
-					const notification = new Notification(message.sentBy.name, {
-						body: message.text,
-						badge: message.sentBy.image,
-						icon: message.sentBy.image,
+					const notification = new Notification(message.sender.name, {
 						tag: message.channelId + '',
+						body: message.text,
+						image: message.image ?? undefined,
+						badge: logo,
+						icon: logo,
 						renotify: true,
 					});
 					notification.addEventListener('click', (event) => {
@@ -93,19 +100,18 @@
 					});
 				}
 			});
-			unsubscribers[1] = await ws.onJoin((channel) => {
-				contacts.push(channel);
-				ws.connect({ id: buyer.chatNodeId, channel: [channel] });
-				contacts = contacts;
+			wsclient.onJoin((channel) => {
+				channels.push(channel);
+				channels = channels;
+				wsclient.connect({ nodeId: buyer.chatNodeId, channel: [channel] });
 				snackbar.setText('Terdapat Kontak Baru');
 				snackbar.show();
 			});
-			unsubscribers[2] = await ws.onClose(() => {
+			wsclient.onClose(() => {
 				snackbar.setText('Koneksi Mati');
 				snackbar.show();
 
-				release();
-				init();
+				sendDisable = true;
 			});
 
 			Notification.requestPermission((permission) => {});
@@ -119,11 +125,11 @@
 	}
 	async function release() {
 		sendDisable = true;
-		unsubscribers.forEach((unsubscribe) => unsubscribe());
+		wsclient.disconnect();
 	}
 	async function search() {
 		let regex = new RegExp(searchText, 'ig');
-		findContacts = contacts.filter((contact) => regex.test(contact.name));
+		findContacts = channels.filter((contact) => regex.test(contact.name));
 	}
 	async function send() {
 		try {
@@ -134,9 +140,8 @@
 			}
 			await client.api.chat.message({
 				data: {
-					sentAt: new Date(),
 					channelId: contact.id,
-					sentById: buyer.chatNodeId,
+					senderId: buyer.chatNodeId,
 					text: messageText,
 				},
 			});
@@ -342,7 +347,7 @@
 							</li>
 						{/each}
 					{:else}
-						{#each contacts as item}
+						{#each channels as item}
 							<li
 								class="item {item.id == contact?.id ? 'primary-color' : ''}"
 								on:click="{() => {
@@ -400,7 +405,7 @@
 					<Divider />
 					<section bind:this="{content}" class="content">
 						{#each contact.message as message}
-							{#if message.sentBy.id == buyer.chatNodeId}
+							{#if message.sender.id == buyer.chatNodeId}
 								<section transition:scale class="item right primary-color">
 									<div>{message.text}</div>
 								</section>

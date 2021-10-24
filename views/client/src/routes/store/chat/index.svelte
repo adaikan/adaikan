@@ -1,60 +1,34 @@
 <script context="module" lang="ts">
 	import {
 		MaterialAppMin,
-		ProgressLinear,
 		AppBar,
-		Footer,
 		Button,
 		Icon,
-		Menu,
-		ListItem,
-		NavigationDrawer,
-		Avatar,
-		List,
-		ListItemGroup,
 		Divider,
-		Overlay,
-		Badge,
 		TextField,
-		Checkbox,
 	} from 'svelte-materialify/src';
 	import {
-		mdiMenu,
-		mdiDotsVertical,
-		mdiViewGridOutline,
-		mdiClipboardTextOutline,
-		mdiSync,
-		mdiCheck,
-		mdiTruckOutline,
-		mdiCubeOutline,
-		mdiAccount,
-		mdiRefresh,
 		mdiMagnify,
 		mdiChevronLeft,
 		mdiSendOutline,
 		mdiAccountOutline,
-		mdiAttachment,
 	} from '@mdi/js';
-	import CartCard from '$components/cart-card.svelte';
+	import ProgressLinear from '$components/progress-linear.svelte';
 	import Snackbar from '$components/snackbar.svelte';
 
 	import { onMount, onDestroy, getContext } from 'svelte';
-	import { writable } from 'svelte/store';
-	import { fade, slide, scale } from 'svelte/transition';
-	import { browser, dev } from '$app/env';
-	import { goto } from '$app/navigation';
-	import { assets } from '$app/paths';
-	import { page, navigating } from '$app/stores';
+	import { slide, scale } from 'svelte/transition';
+
+	import { page } from '$app/stores';
+
+	import logo from '$static/logo.png';
 
 	import type { SellerClientApi } from '../__layout.svelte';
-
-	let showProgress = writable(true);
-	let progress = writable(0);
-	let indeterminate = writable(true);
 </script>
 
 <script lang="ts">
 	const client = getContext<SellerClientApi>('seller');
+	const wsclient = client.chat.ws();
 	let seller: SellerClientApi.Seller;
 	let store: SellerClientApi.Store;
 	let snackbar: Snackbar;
@@ -62,7 +36,8 @@
 	let contacts: SellerClientApi.Chat.Channel[] = [];
 	let findContacts: SellerClientApi.Chat.Channel[] = [];
 	let fakeContact = Array(4);
-	let unsubscribers: Function[] = [];
+	let connectTo = $page.query.get('connectTo');
+	let progress: ProgressLinear;
 	let searchText = '';
 	let messageText = '';
 	let sendDisable = true;
@@ -70,8 +45,7 @@
 	let width = 0;
 	let screen: 'desktop' | 'mobile' = 'mobile';
 
-	navigating.subscribe((value) => value && loading());
-
+	$: loading = progress?.active;
 	$: contact && content && scrollContent();
 	$: searchText && search();
 	$: {
@@ -89,9 +63,12 @@
 			await client.ready;
 			seller = await client.seller.auth();
 			if (!seller.storeId) {
-				throw new Error("Toko tidak ada");
+				throw new Error('Toko tidak ada');
 			}
-			store = await client.store.search({where: {id: seller.storeId}, rejectOnNotFound: true});
+			store = await client.store.search({
+				where: { id: seller.storeId },
+				rejectOnNotFound: true,
+			});
 			if (!store.chatNodeId) {
 				const contact = await client.chat.createContact({
 					role: 'seller',
@@ -105,15 +82,17 @@
 				snackbar.setText('Berhasil membuat kontak');
 				snackbar.show();
 			}
+			connectTo &&
+				(await client.chat.connectContact({
+					myId: store.chatNodeId,
+					theirId: +connectTo,
+				}));
 			contacts = await client.chat.getContacts({
 				nodeId: store.chatNodeId,
 			});
 			fakeContact = Array(0);
-
-			const ws = client.chat.ws();
-			ws.connect({ id: store.chatNodeId, channel: contacts });
-
-			unsubscribers[0] = await ws.onMessage((message) => {
+			wsclient.connect({ nodeId: store.chatNodeId, channel: contacts });
+			wsclient.onMessage((message) => {
 				if (contact && contact.id == message.channelId) {
 					contact.message.push(message);
 					contact = contact;
@@ -127,10 +106,10 @@
 					document.visibilityState == 'hidden' &&
 					Notification.permission == 'granted'
 				) {
-					const notification = new Notification(message.sentBy.name, {
+					const notification = new Notification(message.sender.name, {
 						body: message.text,
-						badge: message.sentBy.image,
-						icon: message.sentBy.image,
+						badge: logo,
+						icon: logo,
 						tag: message.channelId + '',
 						renotify: true,
 					});
@@ -139,19 +118,18 @@
 					});
 				}
 			});
-			unsubscribers[1] = await ws.onJoin((channel) => {
+			wsclient.onJoin((channel) => {
 				contacts.push(channel);
-				ws.connect({ id: store.chatNodeId, channel: [channel] });
 				contacts = contacts;
+				wsclient.connect({ nodeId: store.chatNodeId, channel: [channel] });
 				snackbar.setText('Terdapat Kontak Baru');
 				snackbar.show();
 			});
-			unsubscribers[2] = await ws.onClose(() => {
+			wsclient.onClose(() => {
 				snackbar.setText('Koneksi Mati');
 				snackbar.show();
 
-				release();
-				init();
+				sendDisable = true;
 			});
 
 			Notification.requestPermission((permission) => {});
@@ -160,18 +138,12 @@
 			snackbar.show();
 		} finally {
 			sendDisable = false;
-			loaded();
+			progress.loaded();
 		}
 	}
 	async function release() {
 		sendDisable = true;
-		unsubscribers.forEach((unsubscribe) => unsubscribe());
-	}
-	function loading() {
-		$showProgress = true;
-	}
-	function loaded() {
-		$showProgress = false;
+		wsclient.disconnect();
 	}
 	async function search() {
 		let regex = new RegExp(searchText, 'ig');
@@ -179,7 +151,7 @@
 	}
 	async function send() {
 		try {
-			loading();
+			progress.loading();
 			sendDisable = true;
 			if (!contact) {
 				throw new Error('Kontak tidak ditemukan');
@@ -188,7 +160,7 @@
 				data: {
 					sentAt: new Date(),
 					channelId: contact.id,
-					sentById: store.chatNodeId,
+					senderId: store.chatNodeId,
 					text: messageText,
 				},
 			});
@@ -198,7 +170,7 @@
 			snackbar.show();
 		} finally {
 			sendDisable = false;
-			loaded();
+			progress.loaded();
 		}
 	}
 	function scrollContent() {
@@ -341,15 +313,11 @@
 <div bind:clientWidth="{width}" transition:slide>
 	<MaterialAppMin>
 		<ProgressLinear
-			bind:active="{$showProgress}"
-			bind:indeterminate="{$indeterminate}"
-			bind:value="{$progress}"
-			class="loader"
-			height="4px"
+			bind:this="{progress}"
 			backgroundColor="secondary-color"
 			color="secondary-color"
 		/>
-		<AppBar class="appbar primary-color {$showProgress ? 'top-4' : ''}">
+		<AppBar class="appbar primary-color {$loading ? 'top-4' : ''}">
 			<span slot="icon">
 				<Button fab icon text size="small" on:click="{() => history.back()}">
 					<Icon path="{mdiChevronLeft}" />
@@ -359,7 +327,11 @@
 		</AppBar>
 		<main class="{screen}">
 			<section class="card {screen == 'mobile' && contact ? 'hide' : ''}">
-				<form autocomplete="off" on:submit|preventDefault="{search}" class="search">
+				<form
+					autocomplete="off"
+					on:submit|preventDefault="{search}"
+					class="search"
+				>
 					<TextField
 						outlined
 						dense
@@ -454,7 +426,7 @@
 					<Divider />
 					<section bind:this="{content}" class="content">
 						{#each contact.message as message}
-							{#if message.sentBy.id == store.chatNodeId}
+							{#if message.sender.id == store.chatNodeId}
 								<section transition:scale class="item right primary-color">
 									<div>{message.text}</div>
 								</section>
@@ -466,7 +438,11 @@
 						{/each}
 					</section>
 					<Divider />
-					<form autocomplete="off" on:submit|preventDefault="{send}" class="bottombar">
+					<form
+						autocomplete="off"
+						on:submit|preventDefault="{send}"
+						class="bottombar"
+					>
 						<TextField
 							outlined
 							dense
