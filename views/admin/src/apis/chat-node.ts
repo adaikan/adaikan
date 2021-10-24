@@ -77,7 +77,7 @@ export default class ChatNodeClientApi {
 	token: Token;
 	constructor(clientApi: ClientApi, token: Token) {
 		this.api = clientApi.clone({
-			path: 'chat-node',
+			path: '/chat-node',
 		});
 		this.token = token.clone();
 	}

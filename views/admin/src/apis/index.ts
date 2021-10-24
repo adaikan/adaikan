@@ -60,6 +60,9 @@ export namespace ClientApi {
 		export type OrderDetail = AdminData.OrderDataDetail;
 		export type Sale = AdminData.Sale;
 		export type SaleDetail = AdminData.SaleDetail;
+		export type Subs = AdminData.Subs;
+		export type DirTree = AdminData.DirTree;
+		export type DirFile = AdminData.DirFile;
 	}
 
 	export type Cart = CartData;
@@ -73,16 +76,17 @@ export namespace ClientApi {
 	export type ChatNode = ChatNodeData;
 	export type ChatMessageStack = ChatMessageStackData;
 	export type ChatMessage = ChatMessageData;
-	
+
 	export namespace Chat {
 		export type Channel = ChatData.Channel;
-		export type	ChatReceiveFormat = ChatData.ChatReceiveFormat;
-		export type	ChatSendFormat = ChatData.ChatSendFormat;
+		export type ChatReceiveFormat = ChatData.ChatReceiveFormat;
+		export type ChatSendFormat = ChatData.ChatSendFormat;
 	}
 }
 interface Options {
 	role: User;
 	base: string;
+	esbase: string;
 	wsbase: string;
 	version: Version;
 	debug: boolean;
@@ -113,9 +117,10 @@ export class ClientApi {
 	private instance = new Promiseify<ClientApi>();
 	constructor(options: Options) {
 		this.options = Object.assign({}, options);
-		const { base, wsbase, debug, mode, role, version } = this.options;
+		const { base, esbase, wsbase, debug, mode, role, version } = this.options;
 		const stdApi = new StdApi({
 			base,
+			esbase,
 			wsbase,
 			version,
 			mode,
