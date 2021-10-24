@@ -8,8 +8,8 @@
 - [Project Usage](#project-usage)
   - [Installation](#installation)
   - [Configuration](#configuration)
-    - [npm scripts](#npm-scripts)
-    - [cli](#cli)
+    - [NPM Scripts](#npm-scripts)
+    - [CLI](#cli)
   - [Run](#run)
   - [Test](#test)
 - [License](#license)
@@ -20,17 +20,18 @@ Ada Fish is here to solve the difficult problem of finding the fish that fish co
 
 ## Features
 
-    - [x] Fish catalog
-    - [x] Cart
-    - [x] Buy fish
-    - [x] Map for address
-    - [x] Chat (text)
-    - [x] Rating Order
-    - [x] Email verification
-    - [x] Seller Dashboard
-    - [x] Courier Dashboard
-    - [x] Admin Dashboard
-    - [x] PWA
+- [x] Fish catalog
+- [x] Cart
+- [x] Buy fish
+- [x] Map for address
+- [x] Chat (text)
+- [x] Rating Order
+- [x] Email verification
+- [x] Seller Dashboard
+- [x] Courier Dashboard
+- [x] Admin Dashboard
+- [x] PWA
+- [x] Push Notifications
 
 ## Requirements
 
@@ -64,7 +65,7 @@ You can configure application by npm scripts or cli.
 
 For development purposes, you can skip build step.
 
-#### npm scripts
+#### NPM Scripts
 
 1.  Set environment
 
@@ -76,9 +77,15 @@ For development purposes, you can skip build step.
 
          npm run env -- --production
 
-2.  Generate Authentication Key
+2.  Generate Key
+
+    Authentication Key
 
         npm run key-pair
+
+    Vapid Key
+
+        -
 
 3.  Buid views
 
@@ -94,9 +101,53 @@ For development purposes, you can skip build step.
 
         npm run build
 
-#### cli
+> Some steps can't use npm scripts, use cli instead.
+
+#### CLI
+
+The CLI using repl sistem system
 
     npm run console
+
+1.  Set environment
+
+    Development
+
+         env setup
+
+    Production
+
+         env setup @prod
+
+2.  Generate Key
+
+    Authentication Key
+
+        generate auth-key
+
+    Vapid Key
+
+        generate vapid-key
+
+3.  Buid
+
+    Client
+
+        build client
+
+    Admin
+
+        build admin
+
+    Server
+
+        build
+
+4. Push DB to Schema ORM
+
+        db push
+
+> Don't forget to create a database and sync to the environment.
 
 ### Run
 
@@ -116,7 +167,6 @@ With pm2
 
     npx pm2 start build/server.js
 
-
 ### Test
 
     npm run test
@@ -127,4 +177,4 @@ Code and Contributions have [MIT License](https://github.com/adaikan/adaikan/blo
 
 ---
 
-**Copyright © 2021 Ada Ikan | Arwana, All Right Reserved.**
+**Copyright © 2021 Ada Ikan - Arwana, All Right Reserved.**
