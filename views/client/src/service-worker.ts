@@ -4,13 +4,68 @@
 import Service from '$lib/service';
 import { build, files, timestamp } from '$service-worker';
 
-const {} = import.meta.env;
+import type { WebPushPayload } from '$server/global';
+import type { Message } from '$server/schemas/v0-alpha.1/chat';
+
+const dev = false;
 const service = new Service({
-	debug: false,
+	debug: dev,
 	cachename: timestamp + '',
 	resources: ['/', ...build, ...files],
 });
 
+service.register(async (instance, context) => {
+	context.addEventListener('push', async (event) => {
+		const process = instance.promiseify();
+		event.waitUntil(process.promise);
+		if (event.data) {
+			const data = (await event.data.json()) as WebPushPayload;
+			if (data.tag == 'notify') {
+				context.addEventListener('notificationclick', async (event) => {
+					const process = instance.promiseify();
+					event.waitUntil(process.promise);
+					const clients: WindowClient[] =
+						(await context.clients.matchAll()) as any;
+					for (const client of clients) {
+						await client.navigate(data.href);
+					}
+					process.resolver(null);
+				});
+				await context.registration.showNotification(
+					(data.notifications as any).title,
+					data.notifications
+				);
+			} else if (data.tag == 'clean-up') {
+				await instance.clean();
+			} else if (data.tag == 'update') {
+				await context.registration.update();
+			} else if (data.tag == 'chat') {
+				const { message } = data as WebPushPayload & {
+					message: Message;
+				};
+				context.addEventListener('notificationclick', async (event) => {
+					const process = instance.promiseify();
+					event.waitUntil(process.promise);
+					const clients: WindowClient[] =
+						(await context.clients.matchAll()) as any;
+					for (const client of clients) {
+						client.navigate(data.href);
+					}
+					process.resolver(null);
+				});
+				await context.registration.showNotification(message.sender.name, {
+					tag: message.channelId + '',
+					body: message.text,
+					image: message.image ?? undefined,
+					badge: '/logo.png',
+					icon: '/logo.png',
+					renotify: true,
+				});
+			}
+		}
+		process.resolver(null);
+	});
+});
 service.route({
 	url: /chrome-extension:.*/,
 	method: 'GET',
@@ -25,42 +80,41 @@ service.route({
 	method: 'GET',
 	handler: async (request, util) => {
 		return {
-			name: 'api',
-			strategy: 'net-only'
+			strategy: 'net-only',
 		};
 	},
 });
 service.route({
-	url: new RegExp(location.origin + '/api/' + '.*', 'ig'),
+	url: new RegExp(location.origin + '/(event|server)/' + '.*'),
 	method: 'GET',
-	handler: async (request, util) => {
-		return {
-			name: 'api',
-			strategy: 'net-first'
-		};
-	},
-});
-service.route({
-	url: /.*/,
-	method: 'GET',
-	handler: async (request, util) => {
-		return {
-			name: 'static',
-			timeout: 5000,
-			retry_interval: 10000,
-			retry_times: 3,
-			strategy: 'cache-first',
-		};
-	},
-});
-service.route({
-	url: /.*/,
-	method: '*',
 	handler: async (request, util) => {
 		return {
 			strategy: 'net-only',
 		};
 	},
 });
-
+service.route({
+	url: new RegExp(location.origin + '/api/' + '.*'),
+	method: 'GET',
+	handler: async (request, util) => {
+		return {
+			cache_name: 'api',
+			strategy: 'net-first',
+		};
+	},
+});
+service.route({
+	url: /.*/,
+	method: 'GET',
+	handler: async (request, util) => {
+		return {
+			timeout: 1e3,
+			retry_interval: 3e3,
+			retry_times: 2,
+			cache_name: 'static',
+			expire: 1e3 * 60 * 60 * 12,
+			strategy: 'cache-first',
+		};
+	},
+});
 service.start();
