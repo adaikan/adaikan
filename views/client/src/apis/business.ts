@@ -11,7 +11,7 @@ export default class AddressClientApi {
 	token: Token;
 	constructor(clientApi: ClientApi, token: Token) {
 		this.api = clientApi.clone({
-			path: 'business',
+			path: '/business',
 		});
 		this.token = token.clone();
 	}
@@ -46,7 +46,7 @@ export default class AddressClientApi {
 				endpoint: 'slide',
 				headers: { authorization: 'Bearer ' + (await this.getToken()) },
 			})
-			.send<{ id: number; src: string; link: string }[]>();
+			.send<{ id: number; src: string; href: string }[]>();
 		return response.read();
 	}
 

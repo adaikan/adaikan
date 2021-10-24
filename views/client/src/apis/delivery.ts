@@ -67,7 +67,7 @@ export default class DeliveryClientApi {
 	token: Token;
 	constructor(clientApi: ClientApi, token: Token) {
 		this.api = clientApi.clone({
-			path: 'delivery',
+			path: '/delivery',
 		});
 		this.token = token.clone();
 	}

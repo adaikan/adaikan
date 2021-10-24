@@ -12,7 +12,8 @@ import type {
 	ChatReceiveFormat,
 	ChatSendFormat,
 	Message,
-	SendMessage,
+	Connect,
+	Join,
 } from '$server/schemas/v0-alpha.1/chat';
 export type {
 	Channel,
@@ -25,7 +26,6 @@ export type {
 	ChatReceiveFormat,
 	ChatSendFormat,
 	Message,
-	SendMessage,
 };
 export type Contact = ChatNode.Data;
 export default class ChatClientApi {
@@ -33,7 +33,7 @@ export default class ChatClientApi {
 	token: Token;
 	constructor(clientApi: ClientApi, token: Token) {
 		this.api = clientApi.clone({
-			path: 'chat',
+			path: '/chat',
 		});
 		this.token = token.clone();
 	}
@@ -99,74 +99,30 @@ export default class ChatClientApi {
 	}
 
 	public ws() {
-		return new WSChat(this.api.ws());
+		return new WSChatApi(this.api.ws({ persist: true }));
 	}
 }
 
-class WSChat {
-	private static clientWS: ClientWebSocket;
-	private clientWS: ClientWebSocket;
-	constructor(cws: ClientWebSocket) {
-		if (!WSChat.clientWS) {
-			WSChat.clientWS = cws;
-		} else {
-			cws.close();
-		}
-		this.clientWS = WSChat.clientWS;
+class WSChatApi {
+	private clientApi: ClientWebSocket;
+	constructor(clientApi: ClientWebSocket) {
+		this.clientApi = clientApi;
 	}
-	public async connect(node: { id: number; channel: Channel[] }) {
-		await this.clientWS.open;
+	public async connect(data: Connect) {
+		await this.clientApi.open();
 
-		this.clientWS.send(
-			this.serialize<ChatSendFormat>({
-				tag: 'connect',
-				data: node,
-			})
-		);
+		this.clientApi.send('connect', data);
 	}
-	public async onMessage(
-		handler: (
-			message: ChatMessage.Data & {
-				sentBy: ChatNode.Data;
-				replyFor: ChatMessage.Data | null;
-			}
-		) => any
-	) {
-		await this.clientWS.open;
-		const listener = (event: MessageEvent) => {
-			const message = this.deserialize<ChatReceiveFormat>(event.data);
-			if (message.tag == 'message') {
-				const { data } = message;
-				handler(data);
-			}
-		};
-		this.clientWS.addEventListener('message', listener);
-		return () => this.clientWS.removeEventListener('message', listener);
+	public async disconnect() {
+		await this.clientApi.close();
+	}
+	public async onMessage(handler: (message: Message) => any) {
+		this.clientApi.receive('message', handler);
 	}
 	public async onJoin(handler: (channel: Channel) => any) {
-		await this.clientWS.open;
-		const listener = (event: MessageEvent) => {
-			const message = this.deserialize<ChatReceiveFormat<Channel>>(event.data);
-			if (message.tag == 'join') {
-				const { data } = message;
-				handler(data);
-			}
-		};
-		this.clientWS.addEventListener('message', listener);
-		return () => this.clientWS.removeEventListener('message', listener);
+		this.clientApi.receive('join', handler);
 	}
-	public async onClose(handler: (code: number, reason: string) => any) {
-		await this.clientWS.open;
-		const listener = (event: CloseEvent) => {
-			handler(event.code, event.reason);
-		};
-		this.clientWS.addEventListener('close', listener);
-		return () => this.clientWS.removeEventListener('close', listener);
-	}
-	public serialize<D = any>(data: D) {
-		return JSON.stringify(data);
-	}
-	public deserialize<D = any>(data: string) {
-		return JSON.parse(data) as D;
+	public async onClose(handler: () => any) {
+		this.clientApi.closed.then(handler);
 	}
 }

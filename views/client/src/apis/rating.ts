@@ -77,7 +77,7 @@ export default class RatingClientApi {
 	token: Token;
 	constructor(clientApi: ClientApi, token: Token) {
 		this.api = clientApi.clone({
-			path: 'rating',
+			path: '/rating',
 		});
 		this.token = token.clone();
 	}
