@@ -77,7 +77,13 @@
 			],
 			action() {},
 		},
-		{ name: 'Notifikasi', icon: mdiBellOutline, action() {} },
+		{
+			name: 'Pengaturan',
+			icon: mdiCogOutline,
+			async action() {
+				goto('/courier/account/setting');
+			},
+		},
 		{
 			name: 'Keluar',
 			icon: mdiLogout,

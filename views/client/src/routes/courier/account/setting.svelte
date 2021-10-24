@@ -3,84 +3,56 @@
 		MaterialAppMin,
 		ProgressLinear,
 		AppBar,
-		Footer,
 		Button,
 		Icon,
-		Menu,
-		NavigationDrawer,
-		Avatar,
 		List,
-		ListGroup,
 		ListItem,
-		ListItemGroup,
-		Card,
-		TextField,
 		Switch,
-		Checkbox,
 		Divider,
 		Subheader,
 	} from 'svelte-materialify/src';
-	import {
-		mdiAccountOutline,
-		mdiClipboardListOutline,
-		mdiBellOutline,
-		mdiTagOutline,
-		mdiLogout,
-		mdiAccountCircle,
-		mdiMapMarkerRadiusOutline,
-		mdiCheck,
-		mdiEyeOff,
-		mdiEye,
-		mdiDeleteOutline,
-		mdiChevronLeft,
-		mdiChevronRight,
-	} from '@mdi/js';
+	import { mdiChevronLeft } from '@mdi/js';
 	import Snackbar from '$components/snackbar.svelte';
 	import { onMount, onDestroy, getContext } from 'svelte';
-	import { derived, writable } from 'svelte/store';
-	import { fade, slide } from 'svelte/transition';
-	import { browser, dev } from '$app/env';
-	import { goto } from '$app/navigation';
-	import { assets } from '$app/paths';
-	import { navigating, page } from '$app/stores';
+	import { writable } from 'svelte/store';
+	import { slide } from 'svelte/transition';
+	import { navigating } from '$app/stores';
 	import { Diff } from '$lib/helper';
-	import * as rules from '$lib/rules';
-	import type { SellerClientApi } from '../__layout.svelte';
+
+	import type { Service } from '../../__layout.svelte';
+	import type { CourierClientApi } from '../__layout.svelte';
 </script>
 
 <script lang="ts">
-	const client = getContext<SellerClientApi>('seller');
+	const client = getContext<CourierClientApi>('courier');
+	const service = getContext<Service>('service');
 	const showProgress = writable(true);
 	const progress = writable(0);
 	const indeterminate = writable(true);
-	let seller: SellerClientApi.Data.Seller;
-	let store: SellerClientApi.Data.Store;
+	let courier: CourierClientApi.Courier;
 	let copied: any;
 	let snackbar: Snackbar;
+	let push_notification = false;
+
 	$: {
 		if (navigating && $navigating) {
 			$showProgress = true;
 		}
 	}
 	$: {
-		if (seller) {
+		if (courier) {
 			update();
 		}
 	}
+
 	onMount(init);
 	onDestroy(release);
 	async function init() {
 		try {
 			await client.ready;
-			seller = await client.seller.auth();
-			copied = Diff.objectCopy(seller);
-			if (!seller.storeId) {
-				throw new Error('Toko tidak ada');
-			}
-			store = await client.store.search({
-				where: { id: seller.storeId },
-				rejectOnNotFound: true,
-			});
+			courier = await client.courier.auth();
+			copied = Diff.objectCopy(courier);
+			await ask_push();
 		} catch (error: any) {
 			snackbar.setText(error.message);
 			snackbar.show();
@@ -92,12 +64,12 @@
 	async function update() {
 		try {
 			$showProgress = true;
-			const changed = Diff.object(copied, seller);
+			const changed = Diff.object(copied, courier);
 			if (!changed) {
 				throw new Error('Tidak ada berubah');
 			}
-			await client.seller.update({
-				where: { id: seller.id },
+			await client.courier.update({
+				where: { id: courier.id },
 				data: changed,
 			});
 			snackbar.setText('Berhasil perbarui');
@@ -109,68 +81,31 @@
 			$showProgress = false;
 		}
 	}
+	async function ask_push() {
+		push_notification = await service.subscribed();
+	}
+	async function request_push() {
+		try {
+			$showProgress = true;
+			if (push_notification) {
+				await service.unsubscribe({
+					nodeId: courier.chatNodeId,
+				});
+			} else {
+				await service.subscribe({
+					role: 'courier',
+					userId: courier.id,
+					nodeId: courier.chatNodeId,
+				});
+			}
+			push_notification = !push_notification;
+		} catch (error: any) {
+			console.error(error);
+		} finally {
+			$showProgress = false;
+		}
+	}
 </script>
-
-<svelte:head>
-	<title>Pengaturan</title>
-	<meta name="" content="" />
-</svelte:head>
-
-<div transition:slide>
-	<MaterialAppMin>
-		<ProgressLinear
-			bind:active="{$showProgress}"
-			bind:indeterminate="{$indeterminate}"
-			bind:value="{$progress}"
-			height="4px"
-			backgroundColor="secondary-color"
-			color="secondary-color" />
-		<AppBar class="primary-color {$showProgress ? 'top-4' : ''}">
-			<span slot="icon">
-				<Button fab icon text size="small" on:click="{() => history.back()}">
-					<Icon path="{mdiChevronLeft}" />
-				</Button>
-			</span>
-			<span slot="title">Pengaturan</span>
-		</AppBar>
-		<main class="main">
-			<form id="setting" on:submit|preventDefault="{update}">
-				{#if seller && store}
-					<List>
-						<Subheader>Notifications</Subheader>
-						<ListItem>
-							<span>Notifications</span>
-							<span slot="subtitle"> Allow Notifications </span>
-							<span slot="append">
-								<Switch checked />
-							</span>
-						</ListItem>
-						<Divider />
-						<Subheader>Authentication</Subheader>
-						<ListItem multiline>
-							<span>Two Factor Authentication</span>
-							<span slot="subtitle"
-								>Using 2 factor authentication for Login</span>
-							<span slot="append">
-								<Switch bind:checked="{seller.mfa}" />
-							</span>
-						</ListItem>
-					</List>
-				{:else}
-					<List>
-						<Subheader><div class="label loading"></div></Subheader>
-						<ListItem><div class="textfield loading"></div></ListItem>
-						<ListItem><div class="textfield loading"></div></ListItem>
-						<Subheader><div class="label loading"></div></Subheader>
-						<ListItem><div class="textfield loading"></div></ListItem>
-						<ListItem><div class="textfield loading"></div></ListItem>
-					</List>
-				{/if}
-			</form>
-		</main>
-		<Snackbar bind:this="{snackbar}" />
-	</MaterialAppMin>
-</div>
 
 <style lang="scss">
 	@import '../../../components/common';
@@ -180,6 +115,7 @@
 	}
 	main {
 		padding: 0;
+		@include main;
 	}
 	form {
 		display: grid;
@@ -198,3 +134,76 @@
 		@include common-appbar;
 	}
 </style>
+
+<svelte:head>
+	<title>Pengaturan</title>
+	<meta name="" content="" />
+</svelte:head>
+
+<div transition:slide>
+	<MaterialAppMin>
+		<ProgressLinear
+			bind:active="{$showProgress}"
+			bind:indeterminate="{$indeterminate}"
+			bind:value="{$progress}"
+			height="4px"
+			backgroundColor="secondary-color"
+			color="secondary-color"
+		/>
+		<AppBar class="primary-color {$showProgress ? 'top-4' : ''}">
+			<span slot="icon">
+				<Button fab icon text size="small" on:click="{() => history.back()}">
+					<Icon path="{mdiChevronLeft}" />
+				</Button>
+			</span>
+			<span slot="title">Pengaturan</span>
+		</AppBar>
+		<main class="main">
+			<form id="setting" on:submit|preventDefault="{update}">
+				{#if courier}
+					<List>
+						<Subheader>Notifications</Subheader>
+						<ListItem>
+							<span>Notifications</span>
+							<span slot="subtitle"> Allow Notifications </span>
+							<span slot="append">
+								<Switch checked />
+							</span>
+						</ListItem>
+						<ListItem>
+							<span>Web Push</span>
+							<span slot="subtitle"> Allow Push Notification </span>
+							<span slot="append">
+								<Switch
+									checked="{push_notification}"
+									on:change="{request_push}"
+								/>
+							</span>
+						</ListItem>
+						<Divider />
+						<Subheader>Authentication</Subheader>
+						<ListItem multiline>
+							<span>Two Factor Authentication</span>
+							<span slot="subtitle"
+								>Using 2 factor authentication for Login</span
+							>
+							<span slot="append">
+								<Switch bind:checked="{courier.mfa}" />
+							</span>
+						</ListItem>
+					</List>
+				{:else}
+					<List>
+						<Subheader><div class="label loading"></div></Subheader>
+						<ListItem><div class="textfield loading"></div></ListItem>
+						<ListItem><div class="textfield loading"></div></ListItem>
+						<Subheader><div class="label loading"></div></Subheader>
+						<ListItem><div class="textfield loading"></div></ListItem>
+						<ListItem><div class="textfield loading"></div></ListItem>
+					</List>
+				{/if}
+			</form>
+		</main>
+		<Snackbar bind:this="{snackbar}" />
+	</MaterialAppMin>
+</div>
