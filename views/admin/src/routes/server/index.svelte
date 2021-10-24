@@ -49,7 +49,7 @@
 				name: user_login.username,
 				role: user_login.role
 			};
-			const event = await client.admin.api.event({ endpoint: 'log', persist: true }).open();
+			const event = await client.admin.api.es({ endpoint: 'log', persist: true }).open();
 			event.message('initial', (data) => {
 				log += data;
 				scrollBottom();
@@ -66,7 +66,7 @@
 	}
 	async function release() {
 		try {
-			await client.admin.api.event({ endpoint: 'log', persist: true }).close();
+			await client.admin.api.es({ endpoint: 'log', persist: true }).close();
 		} catch (error: any) {
 			console.error(error);
 		} finally {
@@ -74,14 +74,29 @@
 	}
 	async function reset() {
 		try {
-      progress.showing();
-			await client.admin.logReset();
+			progress.showing();
+			await client.admin.log_reset();
 			log = '';
 		} catch (error: any) {
 			console.error(error);
 		} finally {
-      progress.hiding();
-    }
+			progress.hiding();
+		}
+	}
+	async function download() {
+		try {
+			progress.showing();
+			const dir_handle = await (window as any).showDirectoryPicker();
+			const new_file_handle = await dir_handle.getFileHandle('server.log', {
+				create: true
+			});
+			const response = await client.admin.log_download();
+			await response.body?.pipeTo(await new_file_handle.createWritable());
+		} catch (error: any) {
+			console.error(error);
+		} finally {
+			progress.hiding();
+		}
 	}
 	function scrollBottom() {
 		setTimeout(() => {
@@ -115,8 +130,9 @@
 				<pre>
 					{@html log}
 				</pre>
-				<div class="flex p-4 bg-base-100 rounded-md">
-					<button on:click={reset} class="btn btn-md">Reset</button>
+				<div class="flex gap-4 p-4 bg-base-100 rounded-md">
+					<button on:click={reset} class="btn btn-sm">Reset</button>
+					<button on:click={download} class="btn btn-sm">Download</button>
 				</div>
 			</Main>
 			<Footer class="bg-base-100 justify-center">
