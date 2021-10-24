@@ -305,7 +305,7 @@ export default class AdminClientApi {
 		return this.api.es({ endpoint: 'log', persist: true });
 	}
 
-	public async logReset() {
+	public async log_reset() {
 		const response = await this.api
 			.request({
 				method: 'DELETE',
@@ -315,6 +315,16 @@ export default class AdminClientApi {
 			})
 			.send<boolean>();
 		return response.read();
+	}
+	public async log_download() {
+		const response = await this.api
+			.request({
+				method: 'GET',
+				endpoint: 'log',
+				headers: { authorization: 'Bearer ' + (await this.getToken()) }
+			})
+			.send<unknown>();
+		return response.raw;
 	}
 
 	public get event() {
