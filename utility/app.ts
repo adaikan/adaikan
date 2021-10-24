@@ -1,18 +1,13 @@
 import type { Env } from 'project/global';
 
 import 'reflect-metadata';
-import fs from 'fs-extra';
 import path from 'path';
 import Dotenv from 'dotenv';
-import Rsa from 'node-rsa';
 import chalk from 'chalk';
 import Fastify from 'fastify';
 
 import EnvJson from 'project/.env.json';
-import { EnvConfig } from 'utility/env';
-import { Seed } from 'utility/seed';
 import { KeyPair } from 'utility/key-pair';
-import { WSS } from 'utility/wss';
 
 export interface Options {
 	verbose: boolean;
@@ -36,7 +31,7 @@ export default class App {
 	constructor(options?: Partial<Options>) {
 		this.options = Object.assign({}, defaultOptions, options);
 
-		console.log(chalk.bgBlack.white`Server Options`, { ...options });
+		console.log(chalk.bgBlack.white`Server Options`, { log: options?.log });
 
 		this.app = Fastify({
 			logger: this.options.log
@@ -97,27 +92,11 @@ export default class App {
 				exposeRoute: true,
 			});
 			await this.app.register(import('fastify-multipart'), {
-				limits: { fileSize: 2_097_152 },
+				limits: { fileSize: 10_000_000 },
 			});
 			await this.app.register(import('fastify-static'), {
 				root: env.SERVER_PUBLIC_DIR,
 				prefix: env.SERVER_STATIC_PATH,
-			});
-			await this.app.register(import('fastify-static'), {
-				root: env.CLIENT_BUILD_DIR,
-				decorateReply: false,
-			});
-			await this.app.register(import('fastify-static'), {
-				root: env.ADMIN_BUILD_DIR,
-				prefix: '/admin/',
-				decorateReply: false,
-			});
-			await this.app.register(import('project/plugins/views'), {
-				root: env.CLIENT_BUILD_DIR,
-			});
-			await this.app.register(import('project/plugins/views'), {
-				root: env.ADMIN_BUILD_DIR,
-				prefix: '/admin/',
 			});
 			await this.app.register(import('project/plugins/validator'), {
 				debug: env.SERVER_ENV == 'development',
@@ -136,21 +115,24 @@ export default class App {
 				pass: env.SECRET_KEY,
 			});
 			await this.app.register(import('project/plugins/identify'));
-			await this.app.register(import('project/plugins/info'));
 			await this.app.register(import('plugins/event'));
-			await this.app.register(import('plugins/sse'));
+			await this.app.register(import('plugins/sse'), {
+				prefix: env.EVENT_SERVER_BASE_PATH,
+			});
 			await this.app.register(import('plugins/mail'), {
 				url: env.EMAIL_URL,
 			});
 			await this.app.register(import('plugins/wss'), {
 				prefix: env.WS_SERVER_BASE_PATH,
+				ping: 50000,
 			});
+			await this.app.register(import('project/plugins/info'));
 			await this.app.register(import('fastify-autoload'), {
 				dir:
 					env.SERVER_ENV == 'development'
 						? path.join(env.PROJECT_ROOT_DIR, 'apis')
 						: path.join(env.SERVER_BUILD_DIR, 'apis'),
-				options: { prefix: env.SERVER_BASE_API_PATH },
+				options: { prefix: env.API_SERVER_BASE_PATH },
 			});
 
 			console.log(chalk.bgBlack.white`Setup Server`, chalk.green`[*]`);

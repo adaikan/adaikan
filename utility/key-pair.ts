@@ -6,6 +6,7 @@ import path from 'path';
 import Dotenv from 'dotenv';
 import Rsa from 'node-rsa';
 import chalk from 'chalk';
+import webPush from 'web-push';
 
 export interface Options {
 	verbose?: boolean;
@@ -87,6 +88,35 @@ export class KeyPair {
 
 		console.log(
 			chalk.bgBlack.white`Load RSA asymmetric key`,
+			chalk.green`[Success]`
+		);
+
+		return {
+			public: publicKey,
+			private: privateKey,
+		};
+	}
+	static vapid(opts: Options) {
+		const { verbose, loadEnv } = Object.assign(
+			{},
+			defOpts,
+			opts
+		) as Required<Options>;
+
+		loadEnv && Dotenv.config({ debug: true });
+
+		const { env } = process as Env<typeof EnvType>;
+		const { privateKey, publicKey } = webPush.generateVAPIDKeys();
+
+		if (verbose) {
+			console.log('%s\n%s', publicKey, privateKey);
+		}
+    
+		fs.writeFileSync(path.join(env.PUBLIC_KEY_DIR, 'vapid-public.pem'), publicKey);
+		fs.writeFileSync(path.join(env.PRIVATE_KEY_DIR, 'vapid-private.pem'), privateKey);
+
+		console.log(
+			chalk.bgBlack.white`Generate RSA asymmetric key`,
 			chalk.green`[Success]`
 		);
 
