@@ -1,31 +1,11 @@
 <script context="module" lang="ts">
 	import {
-		MaterialAppMin,
-		AppBar,
-		Button,
 		TextField,
 		Textarea,
-		Icon,
 		Chip,
-		Footer,
 	} from 'svelte-materialify/src';
-	import {
-		mdiChevronLeft,
-		mdiStorefrontOutline,
-		mdiMessageTextOutline,
-	} from '@mdi/js';
-	import { mdiClipboardTextClockOutline } from '$lib/icons';
-	import ProgressLinear from '$components/progress-linear.svelte';
 	import CartCard from '$components/cart-card.svelte';
-	import UserUnauthDialog from '$components/user-unauth-dialog.svelte';
 
-	import { onMount, onDestroy, getContext } from 'svelte';
-	import { writable } from 'svelte/store';
-	import { fade, slide } from 'svelte/transition';
-	import { browser, dev } from '$app/env';
-	import { goto } from '$app/navigation';
-	import { assets } from '$app/paths';
-	import { page } from '$app/stores';
 	import { Currency } from '$lib/helper';
 
 	import type { BuyerClient } from '../__layout.svelte';
@@ -299,16 +279,6 @@
 		display: grid;
 		row-gap: 8px;
 	}
-	// .btn {
-	// 	width: stretch;
-	// 	height: stretch;
-	// 	display: grid;
-	// 	grid-template-columns: minmax(44px, max-content) 1fr;
-	// 	grid-template-rows: minmax(44px, auto);
-	// 	grid-auto-flow: column;
-	// 	align-items: center;
-	// 	column-gap: 8px;
-	// }
 	.div {
 		display: grid;
 		row-gap: 24px;
@@ -387,21 +357,4 @@
 			bottom: 16px;
 		}
 	}
-	// 	@include common-loader;
-	// 	@include common-app {
-	// 		background-color: #f7f7f7;
-	// 	}
-	// 	@include common-appbar;
-	// 	@include common-footer;
-	// 	.list {
-	// 		display: grid;
-	// 		gap: 16px;
-	// 		.s-badge {
-	// 			width: 100%;
-	// 		}
-	// 		.s-list-item__title,
-	// 		.s-list-item__subtitle {
-	// 			line-height: 1.5;
-	// 		}
-	// 	}
 </style>
