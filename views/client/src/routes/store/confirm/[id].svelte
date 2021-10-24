@@ -556,7 +556,7 @@
 							{#each contact as item}
 								<ListItem
 									on:click="{() => {
-										goto('/store/chat/' + item.node);
+										goto('/store/chat?connectTo=' + item.node);
 									}}"
 								>
 									<div>{item.name}</div>
