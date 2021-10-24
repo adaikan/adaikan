@@ -9,6 +9,9 @@ import { Data as OrderedItem } from './ordered-item';
 import { Data as Delivery } from './delivery';
 import { Data as Courier } from './courier';
 import { Data as Rating } from './rating';
+import { Data as Subscriber } from './subscriber';
+
+export type { DirTree, DirFile } from '../../utility/storage';
 
 export type Data = typeof D;
 export type {
@@ -27,6 +30,7 @@ export type Stat = {
 	order: number;
 	product: number;
 	sales: string;
+	subscriber: number;
 };
 export type SentEvent<D = any> = {
 	tag: string;
@@ -34,9 +38,9 @@ export type SentEvent<D = any> = {
 };
 export type Slide = {
 	id: number;
-	link: string;
+	href: string;
 	src: string;
-}
+};
 export type User = {
 	id: number;
 	node: number;
@@ -86,3 +90,4 @@ export type SaleDetail = Order & {
 	})[];
 	rating: Rating | null;
 };
+export type Subs = Subscriber;

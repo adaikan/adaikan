@@ -93,3 +93,8 @@ export type Verify = {
 	otp: string;
 	email: string;
 }
+export type ResetPasswordData = {
+	email: string;
+	username: string;
+	new_password: string;
+};
