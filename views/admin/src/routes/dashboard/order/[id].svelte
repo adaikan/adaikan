@@ -552,7 +552,7 @@
 										<ListItem>
 											<button
 												type="button"
-												on:click={() => goto(base + '/chat/' + contact.nodeId)}
+												on:click={() => goto(base + '/chat?connect_with=' + contact.nodeId)}
 												class="w-full p-3 hover:bg-gray-400 dark:hover:bg-gray-500"
 												>{contact.name}</button
 											>
