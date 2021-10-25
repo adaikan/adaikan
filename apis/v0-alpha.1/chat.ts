@@ -96,15 +96,18 @@ const route: FastifyPluginAsync = async (server, opts) => {
 						message,
 						notifications: {} as any,
 					};
-					try {
-						await webpush.sendNotification(
+					webpush
+						.sendNotification(
 							subscriber.subcription as any,
 							JSON.stringify(payload)
-						);
-					} catch (error: any) {
-						server.log.error(error);
-						await modelSubscriber.delete({ where: { id: subscriber.id } });
-					}
+						)
+						.catch((error) => {
+							if (error.statusCode == 410) {
+								modelSubscriber.delete({ where: { id: subscriber.id } });
+							} else {
+								server.log.error(error);
+							}
+						});
 				}
 			}
 		}

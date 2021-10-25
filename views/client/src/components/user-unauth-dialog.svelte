@@ -14,6 +14,7 @@
 
 	export let active = false;
 	export let basepath = '';
+	export let role = '';
 </script>
 
 <Dialog persistent bind:active>
@@ -21,9 +22,17 @@
 		<CardTitle>Anda belum masuk</CardTitle>
 		<CardText>Untuk mengakses halaman ini di perlukan akun.</CardText>
 		<CardActions>
-			<Button on:click="{() => goto(`${basepath}/entry/register`, {replaceState: true})}" text>Mendaftar</Button>
-			<Button on:click="{() => goto(`/entry/login`, {replaceState: true})}" text class="primary-text"
-				>Masuk</Button>
+			<Button
+				on:click="{() =>
+					goto(`${basepath}/entry/register`, { replaceState: true })}"
+				text>Mendaftar</Button
+			>
+			<Button
+				on:click="{() =>
+					goto(`/entry/login?role=` + role, { replaceState: true })}"
+				text
+				class="primary-text">Masuk</Button
+			>
 		</CardActions>
 	</Card>
 </Dialog>

@@ -1,6 +1,6 @@
 import type { FastifyPluginAsync } from 'fastify';
 import type EnvJson from 'project/.env.json';
-import type { Env, WebPushPayload } from 'project/global';
+import type { Env, WebPushPayload, WebPushResponse } from 'project/global';
 import type { Data } from 'schemas/v0-alpha.1/admin';
 
 import wrapper from 'fastify-plugin';
@@ -8,7 +8,7 @@ import fs from 'fs-extra';
 import path from 'path';
 import glob from 'fast-glob';
 import webpush from 'web-push';
-import { SubscriberModel } from 'models/subscriber';
+import { SubscriberModel, Data as Subscriber } from 'models/subscriber';
 
 interface Options {
 	root: string;
@@ -132,18 +132,53 @@ const plugin: Plugin = async (app, opts) => {
 		method: 'POST',
 		handler: async (request, reply) => {
 			const user = await request.identify();
-			const subscribers = await modelSubscriber.searchMany({
-				where: {
-					AND: request.body.subscribers.map((role) => ({ role })),
-				},
-			});
-			for (const subscriber of subscribers) {
-				await webpush.sendNotification(
-					subscriber.subcription as any,
-					JSON.stringify(request.body)
-				);
+			const result: WebPushResponse = {
+				state: 'failed',
+				message: 'Something wrong',
+			};
+			let pass = 0;
+			let subscribers: Subscriber[] = [];
+			if (request.body.subscribers.includes('*')) {
+				subscribers = await modelSubscriber.searchMany({});
+			} else if (request.body.subscribers.length) {
+				const any = request.body.subscribers[0];
+				if (parseInt(any) > 0) {
+					subscribers = await modelSubscriber.searchMany({
+						where: {
+							AND: request.body.subscribers.map((id) => ({ id: +id })),
+						},
+					});
+				} else {
+					subscribers = await modelSubscriber.searchMany({
+						where: {
+							AND: request.body.subscribers.map((role) => ({ role })),
+						},
+					});
+				}
 			}
-			reply.accept();
+			for (const subscriber of subscribers) {
+				try {
+					await webpush.sendNotification(
+						subscriber.subcription as any,
+						JSON.stringify(request.body)
+					);
+					pass++;
+				} catch (error: any) {
+					if (error.statusCode == 410) {
+						await modelSubscriber.delete({ where: { id: subscriber.id } });
+					} else {
+						reply.log.error(error);
+					}
+				}
+			}
+			if (pass == request.body.subscribers.length) {
+				result.state = 'success';
+				result.message = `Success broadcast to all (${pass})`;
+			} else {
+				result.state = 'warn';
+				result.message = `Success broadcast to several (${pass})`;
+			}
+			reply.ok(result);
 		},
 		schema: {},
 	});

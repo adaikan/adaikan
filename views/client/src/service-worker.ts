@@ -7,7 +7,7 @@ import { build, files, timestamp } from '$service-worker';
 import type { WebPushPayload } from '$server/global';
 import type { Message } from '$server/schemas/v0-alpha.1/chat';
 
-const dev = false;
+const dev = true;
 const service = new Service({
 	debug: dev,
 	cachename: timestamp + '',
@@ -67,16 +67,7 @@ service.register(async (instance, context) => {
 	});
 });
 service.route({
-	url: /chrome-extension:.*/,
-	method: 'GET',
-	handler: async (request, util) => {
-		return {
-			strategy: 'net-only',
-		};
-	},
-});
-service.route({
-	url: /wss?:.*/,
+	url: /(chrome-extension:|wss?:).*/,
 	method: 'GET',
 	handler: async (request, util) => {
 		return {
@@ -98,7 +89,11 @@ service.route({
 	method: 'GET',
 	handler: async (request, util) => {
 		return {
+			timeout: 1e3,
+			retry_interval: 3e3,
+			retry_times: 2,
 			cache_name: 'api',
+			expire: 1e3 * 60 * 60 * 12,
 			strategy: 'net-first',
 		};
 	},
@@ -112,7 +107,7 @@ service.route({
 			retry_interval: 3e3,
 			retry_times: 2,
 			cache_name: 'static',
-			expire: 1e3 * 60 * 60 * 12,
+			expire: 1e3 * 60 * 60 * 24,
 			strategy: 'cache-first',
 		};
 	},

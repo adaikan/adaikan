@@ -33,6 +33,7 @@
 
 	import type { ObserverUnsafe } from '$lib/helper';
 	import type { CourierClientApi } from './__layout.svelte';
+	import type { Service } from '../__layout.svelte';
 
 	const title = 'Home';
 	const navigation = [
@@ -61,6 +62,7 @@
 
 <script lang="ts">
 	const client = getContext<CourierClientApi>('courier');
+	const service = getContext<Service>('service');
 	const is_desktop = getContext<ObserverUnsafe<boolean>>('is_desktop');
 	let user: CourierClientApi.Courier;
 	let delivery:
@@ -94,9 +96,15 @@
 				},
 				include: { sender: true },
 			});
-			console.log(pathname);
+			service.register('service-worker.js');
+			service.subscribe({
+				role: 'buyer',
+				userId: user.id,
+				nodeId: user.chatNodeId,
+			});
 		} catch (error: any) {
 			showUserUnauthDialog = true;
+			service.unregister();
 		} finally {
 			loader.loaded();
 		}
@@ -172,26 +180,8 @@
 	<MaterialAppMin>
 		<ProgressLinear bind:this="{loader}" />
 		<AppBar class="primary-color {$loading ? 'top-4' : ''}">
-			<!-- <span slot="icon">
-				{#if $is_desktop}
-					<Button
-						fab
-						icon
-						text
-						size="small"
-						on:click="{() => (drawer = !drawer)}"
-					>
-						<Icon path="{mdiMenu}" />
-					</Button>
-				{/if}
-			</span> -->
 			<span slot="title">{title}</span>
 		</AppBar>
-		<!-- <Overlay
-			active="{drawer}"
-			on:click="{() => (drawer = !drawer)}"
-			index="{3}"
-		/> -->
 		{#if $is_desktop}
 			<section transition:slide class="list">
 				<NavigationDrawer active="{true}" fixed="{false}" index="{1}">
@@ -300,6 +290,7 @@
 		<UserUnauthDialog
 			bind:active="{showUserUnauthDialog}"
 			basepath="/courier"
+			role="courier"
 		/>
 		<InitDialog bind:active="{showInitDialog}" />
 	</MaterialAppMin>

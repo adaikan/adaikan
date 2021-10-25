@@ -67,7 +67,7 @@ const config = {
 		target: 'body',
 		adapter: adapter_node({
 			entryPoint: 'src/server.js',
-			precompress: false
+			precompress: true
 		})
 	}
 };

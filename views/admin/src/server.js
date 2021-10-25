@@ -1,8 +1,12 @@
 import { assetsMiddleware, prerenderedMiddleware, kitMiddleware } from '../build/middlewares.js';
 import http from '0http';
 
+const port = 3050;
+const host = '0.0.0.0';
 const { router, server } = http();
 
-router.use('/', assetsMiddleware, prerenderedMiddleware, kitMiddleware)
+router.use('/', assetsMiddleware, prerenderedMiddleware, kitMiddleware);
 
-server.listen(3050, '0.0.0.0');
+server.listen(port, host, () => {
+	console.log(`Listening on ${host}:${port}`);
+});

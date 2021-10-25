@@ -1,7 +1,7 @@
 import ClientApi from './client-api';
 import ClientStore from './client';
 
-import type { WebPushPayload } from '$server/global';
+import type { WebPushPayload, WebPushResponse } from '$server/global';
 
 type BeforeInstallPromptEvent = Event & {
 	userChoice: Promise<any>;
@@ -169,12 +169,12 @@ export class Service {
 		return !!subscription;
 	}
 	public async broadcast(data: WebPushPayload) {
-		await this.clientApi.request({
+		const response = await this.clientApi.request({
 			endpoint: 'broadcast',
 			method: 'POST',
 			body: data,
-		}).send();
-		return this;
+		}).send<WebPushResponse>();
+		return response.read();
 	}
 	
 	public async sync(tag: string) {

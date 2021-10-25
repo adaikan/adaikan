@@ -35,6 +35,7 @@
 	let progress: Progress;
 
 	let subscribers_options = ['buyer', 'seller', 'courier', 'internal'];
+	let subscribers_data: ClientApi.Admin.Subs[] = [];
 	let tag = '';
 	let subscriber = '';
 	let href = '';
@@ -47,6 +48,8 @@
 		icon: logo,
 		renotify: true
 	};
+	let state = '';
+	let message = '';
 	let allow = false;
 	let disable = true;
 
@@ -57,7 +60,7 @@
 		try {
 			await client.ready;
 			if (!user_login) {
-				return goto('/admin', {replaceState: true});
+				return goto('/admin', { replaceState: true });
 			}
 
 			account = {
@@ -65,6 +68,8 @@
 				name: user_login.username,
 				role: user_login.role
 			};
+
+			subscribers_data = await client.admin.subscribers();
 
 			allow = true;
 			disable = false;
@@ -85,14 +90,17 @@
 		try {
 			progress.showing();
 			disable = true;
-			await service.broadcast({
+			const result = await service.broadcast({
 				tag,
 				subscribers: [subscriber],
 				href,
 				notifications
 			});
+			state = result.state;
+			message = result.message;
+			subscribers_data = await client.admin.subscribers();
 		} catch (error: any) {
-			console.error(error);
+			message = error.message;
 		} finally {
 			disable = false;
 			progress.hiding();
@@ -124,6 +132,64 @@
 					class="flex flex-col gap-12 p-6 bg-base-100 rounded-lg"
 				>
 					<div class="flex flex-col gap-4 justify-self-center">
+						{#if state == 'success'}
+							<output class="alert alert-success">
+								<div class="grid grid-flow-col gap-2">
+									<svg
+										class="w-6 h-6"
+										fill="none"
+										stroke="currentColor"
+										viewBox="0 0 24 24"
+										xmlns="http://www.w3.org/2000/svg"
+										><path
+											stroke-linecap="round"
+											stroke-linejoin="round"
+											stroke-width="2"
+											d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+										/></svg
+									>
+									<div class="text-justify">{message}</div>
+								</div>
+							</output>
+						{:else if state == 'warn'}
+							<output class="alert alert-warning">
+								<div class="grid grid-flow-col gap-2">
+									<svg
+										class="w-6 h-6"
+										fill="none"
+										stroke="currentColor"
+										viewBox="0 0 24 24"
+										xmlns="http://www.w3.org/2000/svg"
+										><path
+											stroke-linecap="round"
+											stroke-linejoin="round"
+											stroke-width="2"
+											d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
+										/></svg
+									>
+									<div class="text-justify">{message}</div>
+								</div>
+							</output>
+						{:else if state == 'failed'}
+							<output class="alert alert-error">
+								<div class="grid grid-flow-col gap-2">
+									<svg
+										class="w-6 h-6"
+										fill="none"
+										stroke="currentColor"
+										viewBox="0 0 24 24"
+										xmlns="http://www.w3.org/2000/svg"
+										><path
+											stroke-linecap="round"
+											stroke-linejoin="round"
+											stroke-width="2"
+											d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"
+										/></svg
+									>
+									<div class="text-justify">{message}</div>
+								</div>
+							</output>
+						{/if}
 						{#if allow}
 							<div class="form-control">
 								<label for="tag" class="label">
@@ -157,9 +223,17 @@
 									required
 									class="select select-ghost select-primary bg-base-200"
 								>
-									{#each subscribers_options as options}
-										<option value={options}>{options}</option>
-									{/each}
+									<option value="*">All</option>
+									<optgroup label="By Role">
+										{#each subscribers_options as options}
+											<option value={options}>@{options}</option>
+										{/each}
+									</optgroup>
+									<optgroup label="By ID">
+										{#each subscribers_data as options}
+											<option value={options.id}>#{options.id}</option>
+										{/each}
+									</optgroup>
 								</select>
 							</div>
 							<div class="form-control">

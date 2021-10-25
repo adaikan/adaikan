@@ -31,6 +31,7 @@
 	import { goto } from '$app/navigation';
 
 	import type { SellerClientApi } from '../__layout.svelte';
+	import type { Service } from '../../__layout.svelte';
 
 	let theme = writable<'light' | 'dark'>('light');
 	let showProgress = writable(true);
@@ -42,6 +43,7 @@
 	import { page, navigating } from '$app/stores';
 
 	const client = getContext<SellerClientApi>('seller');
+	const service = getContext<Service>('service');
 	const menu = [
 		{
 			name: 'Akun Saya',
@@ -82,6 +84,8 @@
 			icon: mdiLogout,
 			async action() {
 				loading();
+				service.unsubscribe({ nodeId: store.chatNodeId });
+				service.unregister();
 				await client.seller.token.remove();
 				await goto('/', { replaceState: true });
 			},

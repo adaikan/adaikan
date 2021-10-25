@@ -40,6 +40,15 @@
 			slides = await client.api.business.slide();
 			product = await client.api.product.getAll();
 			fakeData = Array(0);
+			client
+				.auth()
+				.then(async (user) => {
+					await service.register('service-worker.js');
+					await service.subscribe({role: 'buyer', userId: user.id, nodeId: user.chatNodeId});
+				})
+				.catch(async () => {
+					await service.unregister();
+				});
 		} catch (error: any) {
 		} finally {
 			progress.loaded();

@@ -89,7 +89,7 @@ const config = {
 		vite,
 		target: 'body',
 		adapter: adapter_node({
-			precompress: false,
+			precompress: true,
 		}),
 	},
 };

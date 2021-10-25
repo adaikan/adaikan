@@ -24,10 +24,12 @@
 	export { logo };
 
 	const clientApi = new ClientApi({ base: APIS_URL, version: 'v0-alpha.1' });
-	const store = new UserStore('buyer', { debug: dev });
-	const buyer = new Buyer(clientApi, store);
-	const seller = new Seller(clientApi, store);
-	const courier = new Courier(clientApi, store);
+	const buyer = new Buyer(clientApi, new UserStore('buyer', { debug: dev }));
+	const seller = new Seller(clientApi, new UserStore('seller', { debug: dev }));
+	const courier = new Courier(
+		clientApi,
+		new UserStore('courier', { debug: dev })
+	);
 </script>
 
 <script lang="ts">
