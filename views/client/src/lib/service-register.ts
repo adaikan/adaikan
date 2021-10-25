@@ -47,7 +47,16 @@ export class Service {
 	public async prompt() {
 		return 'default';
 	}
+	public async update() {
+		console.log('[Service] update');
+
+		const service = await navigator.serviceWorker.ready;
+		await service.update();
+		return this;
+	}
 	public async register(url: string) {
+		console.log('[Service] register');
+
 		if ('ServiceWorker' in window) {
 			window.addEventListener('beforeinstallprompt', (event) => {
 				console.log('[Service] window beforeinstallprompt');
@@ -101,15 +110,22 @@ export class Service {
 		}
 	}
 	public async unregister() {
+		console.log('[Service] unregister');
+
 		let registration = await navigator.serviceWorker.ready;
 		await registration.unregister();
 		return this;
+	}
+	public registered() {
+		return !!navigator.serviceWorker.controller;
 	}
 	public async subscribe(data: {
 		role: string;
 		userId: number;
 		nodeId: number;
 	}) {
+		console.log('[Service] subscribe');
+
 		const service = await navigator.serviceWorker.ready;
 		let subscription = await service.pushManager.getSubscription();
 		if (!subscription) {
@@ -138,10 +154,9 @@ export class Service {
 		this.options?.debug && console.log(subscription);
 		return this;
 	}
-	public registered() {
-		return !!navigator.serviceWorker.controller;
-	}
 	public async unsubscribe(data: { nodeId: number }) {
+		console.log('[Service] unsubscribe');
+
 		const service = await navigator.serviceWorker.ready;
 		const subscription = await service.pushManager.getSubscription();
 		if (subscription) {
@@ -160,11 +175,6 @@ export class Service {
 		const service = await navigator.serviceWorker.ready;
 		const subscription = await service.pushManager.getSubscription();
 		return !!subscription;
-	}
-	public async update() {
-		const service = await navigator.serviceWorker.ready;
-		await service.update();
-		return this;
 	}
 	public async sync(tag: string) {
 		const service = (await navigator.serviceWorker
