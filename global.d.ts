@@ -100,3 +100,7 @@ export interface WebPushPayload {
 	};
 	[key: string]: any;
 }
+export interface WebPushResponse {
+	state: string;
+	message: string;
+}
