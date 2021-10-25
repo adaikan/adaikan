@@ -46,6 +46,7 @@
 	import { assets } from '$app/paths';
 
 	import type { CourierClientApi } from '../__layout.svelte';
+	import type { Service } from '../../__layout.svelte';
 
 	let theme = writable<'light' | 'dark'>('light');
 	let showProgress = writable(true);
@@ -57,6 +58,7 @@
 	import { page, navigating } from '$app/stores';
 
 	const client = getContext<CourierClientApi>('courier');
+	const service = getContext<Service>('service');
 	const menu = [
 		{
 			name: 'Akun Saya',
@@ -89,6 +91,8 @@
 			icon: mdiLogout,
 			async action() {
 				loading();
+				service.unsubscribe({ nodeId: user.chatNodeId });
+				service.unregister();
 				await client.courier.token.remove();
 				await goto('/courier/entry', { replaceState: true });
 			},

@@ -40,12 +40,13 @@
 	import { SellerClientApi } from '$lib/seller';
 
 	import type { ObserverUnsafe } from '$lib/helper';
-	import type { BuyerClient } from '../__layout.svelte';
+	import type { BuyerClient, Service } from '../__layout.svelte';
 </script>
 
 <script lang="ts">
 	const buyer = getContext<BuyerClient>('buyer');
 	const is_desktop = getContext<ObserverUnsafe<boolean>>('is_desktop');
+	const service = getContext<Service>('service');
 	const profile = writable(buyer.get());
 	let address: BuyerClient.Address | null;
 	let progress: ProgressLinear;
@@ -219,6 +220,8 @@
 			sub: [],
 			async action() {
 				progress.loading();
+				service.unsubscribe({ nodeId: $profile.chatNodeId });
+				service.unregister();
 				await buyer.logout();
 				await goto('/', { replaceState: true });
 			},
@@ -458,6 +461,6 @@
 			bind:active="{showDeleteAccountDialog}"
 			on:granted="{unregister}"
 		/>
-		<UserUnauthDialog bind:active="{showUserUnauthDialog}" />
+		<UserUnauthDialog bind:active="{showUserUnauthDialog}" role="buyer" />
 	</MaterialAppMin>
 </div>

@@ -51,6 +51,7 @@
 
 	import type { ObserverUnsafe } from '$lib/helper';
 	import type { SellerClientApi } from './__layout.svelte';
+	import type { Service } from '../__layout.svelte';
 
 	const navigations = [
 		{
@@ -89,6 +90,7 @@
 </script>
 
 <script lang="ts">
+	const service = getContext<Service>('service');
 	const is_desktop = getContext<ObserverUnsafe<boolean>>('is_desktop');
 	const features = writable([
 		{
@@ -201,12 +203,20 @@
 			}
 
 			$features = [queue, process, delivery, confirm];
+
+			service.register('service-worker.js');
+			service.subscribe({
+				role: 'buyer',
+				userId: user.id,
+				nodeId: store.chatNodeId,
+			});
 		} catch (error: any) {
 			if (error.message == 'No store') {
 				noStore.$set({ active: true });
 			} else {
 				showUserUnauthDialog = true;
 			}
+			service.unregister();
 		} finally {
 			loader.loaded();
 		}
@@ -434,7 +444,11 @@
 				</Cards>
 			</main>
 		</section>
-		<UserUnauthDialog bind:active="{showUserUnauthDialog}" basepath="/store" />
+		<UserUnauthDialog
+			bind:active="{showUserUnauthDialog}"
+			basepath="/store"
+			role="seller"
+		/>
 		<NoStore bind:this="{noStore}" />
 	</MaterialAppMin>
 </div>
