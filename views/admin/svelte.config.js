@@ -44,8 +44,8 @@ const vite = {
 			'/server': {
 				target: env.VITE_SERVER_ORIGIN,
 				changeOrigin: true,
-				rewrite: (path) => path,
-			},
+				rewrite: (path) => path
+			}
 		}
 	},
 	resolve: {
@@ -66,6 +66,7 @@ const config = {
 		vite,
 		target: 'body',
 		adapter: adapter_node({
+			entryPoint: 'src/server.js',
 			precompress: false
 		})
 	}

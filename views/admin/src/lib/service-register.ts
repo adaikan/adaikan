@@ -1,6 +1,8 @@
 import ClientApi from './client-api';
 import ClientStore from './client';
 
+import type { WebPushPayload } from '$server/global';
+
 type BeforeInstallPromptEvent = Event & {
 	userChoice: Promise<any>;
 	prompt: () => Promise<string>;
@@ -46,6 +48,11 @@ export class Service {
 	}
 	public async prompt() {
 		return 'default';
+	}
+	public async update() {
+		const service = await navigator.serviceWorker.ready;
+		await service.update();
+		return this;
 	}
 	public async register(url: string) {
 		if ('ServiceWorker' in window) {
@@ -105,6 +112,9 @@ export class Service {
 		await registration.unregister();
 		return this;
 	}
+	public registered() {
+		return !!navigator.serviceWorker.controller;
+	}
 	public async subscribe(data: {
 		role: string;
 		userId: number;
@@ -138,9 +148,6 @@ export class Service {
 		this.options?.debug && console.log(subscription);
 		return this;
 	}
-	public registered() {
-		return !!navigator.serviceWorker.controller;
-	}
 	public async unsubscribe(data: { nodeId: number }) {
 		const service = await navigator.serviceWorker.ready;
 		const subscription = await service.pushManager.getSubscription();
@@ -161,11 +168,15 @@ export class Service {
 		const subscription = await service.pushManager.getSubscription();
 		return !!subscription;
 	}
-	public async update() {
-		const service = await navigator.serviceWorker.ready;
-		await service.update();
+	public async broadcast(data: WebPushPayload) {
+		await this.clientApi.request({
+			endpoint: 'broadcast',
+			method: 'POST',
+			body: data,
+		}).send();
 		return this;
 	}
+	
 	public async sync(tag: string) {
 		const service = (await navigator.serviceWorker
 			.ready) as ServiceWorkerRegistration & SyncManager;

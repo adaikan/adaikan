@@ -255,7 +255,7 @@ const cli = new CLI()
 								openAt: '',
 								link: '',
 							},
-							slides: [],
+							slides: [{ id: 0, src: '', href: '' }],
 							subscription: [],
 							config: {
 								lockModel: false,

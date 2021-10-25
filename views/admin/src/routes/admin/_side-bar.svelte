@@ -4,12 +4,11 @@
 	import { slide, scale } from 'svelte/transition';
 
 	import { page } from '$app/stores';
-	import { base } from '$app/paths';
 </script>
 
 <script lang="ts">
 	export let show = true;
-	const path = base + $page.path;
+	const path = $page.path;
 </script>
 
 {#if show}
@@ -24,7 +23,7 @@
 			<ul class="grid gap-2 px-4">
 				<li>
 					<a
-						href="{base}/dashboard"
+						href="/admin/dashboard"
 						class="flex items-center gap-4 px-3 py-2 rounded-md {path.endsWith('/dashboard')
 							? 'bg-primary'
 							: 'hover:bg-base-300'}"
@@ -45,7 +44,7 @@
 				</li>
 				<li>
 					<a
-						href="{base}/analitycs"
+						href="/admin/analitycs"
 						class="flex items-center gap-4 px-3 py-2 rounded-md {path.endsWith('" class="')
 							? 'bg-primary'
 							: 'hover:bg-base-300'}"
@@ -61,7 +60,7 @@
 				</li>
 				<li>
 					<a
-						href="{base}/business"
+						href="/admin/business"
 						class="flex items-center gap-4 px-3 py-2 rounded-md {path.endsWith('/business')
 							? 'bg-primary'
 							: 'hover:bg-base-300'}"
@@ -83,7 +82,7 @@
 				</li>
 				<li>
 					<a
-						href="{base}/server"
+						href="/admin/server"
 						class="flex items-center gap-4 px-3 py-2 rounded-md {path.endsWith('/server')
 							? 'bg-primary'
 							: 'hover:bg-base-300'}"
@@ -106,7 +105,7 @@
 				</li>
 				<li>
 					<a
-						href="{base}/model"
+						href="/admin/model"
 						class="flex items-center gap-4 px-3 py-2 rounded-md {path.endsWith('/model')
 							? 'bg-primary'
 							: 'hover:bg-base-300'}"
@@ -129,7 +128,7 @@
 				</li>
 				<li>
 					<a
-						href="{base}/chat"
+						href="/admin/chat"
 						class="flex items-center gap-4 px-3 py-2 rounded-md {path.endsWith('/chat')
 							? 'bg-primary'
 							: 'hover:bg-base-300'}"
@@ -152,7 +151,7 @@
 				</li>
 				<li>
 					<a
-						href="{base}/account"
+						href="/admin/account"
 						class="flex items-center gap-4 px-3 py-2 rounded-md {path.endsWith('/account')
 							? 'bg-primary'
 							: 'hover:bg-base-300'}"
@@ -244,7 +243,7 @@
 				<ul class="grid gap-2 px-4">
 					<li>
 						<a
-							href="{base}/setting"
+							href="/admin/setting"
 							class="flex items-center gap-4 px-3 py-2 rounded-md {path.endsWith('/setting')
 								? 'bg-primary'
 								: 'hover:bg-base-300'}"
@@ -267,7 +266,7 @@
 					</li>
 					<li>
 						<a
-							href="{base}/logout"
+							href="/admin/logout"
 							class="flex items-center gap-4 px-3 py-2 rounded-md {path.endsWith('/logout')
 								? 'bg-primary'
 								: 'hover:bg-base-300'}"
