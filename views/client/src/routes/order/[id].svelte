@@ -101,6 +101,8 @@
 				});
 				snackbar.setText('Pengiriman terkonfirmasi');
 				snackbar.show();
+				await wait({ timeout: 1000 });
+				goto('/order', { replaceState: true });
 			} else if (order.status == 'Confirm') {
 				await client.api.order.update({
 					where: { id: order.id },
@@ -219,12 +221,12 @@
 						<div></div>
 					{:else if order.status == 'Delivery'}
 						{#if order.delivery.confirmed}
-							<Button class="" disabled>Selesai</Button>
+							<Button class="" disabled>Sampai</Button>
 						{:else}
 							<Button
 								class="primary-color"
 								disabled="{disable}"
-								on:click="{accept}">Selesai</Button
+								on:click="{accept}">Sampai</Button
 							>
 						{/if}
 					{:else if order.status == 'Confirm'}
