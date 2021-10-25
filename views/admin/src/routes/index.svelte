@@ -4,7 +4,7 @@
 	export function load(): LoadOutput {
 		return {
 			status: 303,
-			redirect: 'dashboard'
+			redirect: '/admin/dashboard'
 		};
 	}
 </script>
