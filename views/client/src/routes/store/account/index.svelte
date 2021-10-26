@@ -87,7 +87,7 @@
 				service.unsubscribe({ nodeId: store.chatNodeId });
 				service.unregister();
 				await client.seller.token.remove();
-				await goto('/', { replaceState: true });
+				await goto('/store/entry', { replaceState: true });
 			},
 		},
 		{
