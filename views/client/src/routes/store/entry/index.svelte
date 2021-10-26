@@ -1,5 +1,5 @@
 <script context="module" lang="ts">
-	import { logo } from './__layout.svelte';
+	import logo from '$static/logo.png';
 	import {
 		MaterialAppMin,
 		ProgressLinear,
@@ -43,8 +43,8 @@
 </script>
 
 <svelte:head>
-	<title>Entry Toko</title>
-	<meta name="" content="" />
+	<title>Entry Penjual</title>
+	<meta name="description" content="Entry Penjual" />
 </svelte:head>
 
 <div transition:fade>
@@ -72,7 +72,7 @@
 						width="150"
 						height="150" />
 					<div class="btns">
-						<Button depressed on:click="{() => goto('/store/entry/login')}"
+						<Button depressed on:click="{() => goto('/entry/login?role=seller')}"
 							>Masuk</Button>
 						<Button depressed on:click="{() => goto('/store/entry/register')}"
 							>Daftar</Button>
@@ -90,23 +90,31 @@
 		min-height: 100vh;
 		padding: 32px;
 		display: grid;
+		@include small-up {
+			padding: 32px 15%;
+		}
 	}
 	.surface {
-		margin: 0 auto;
+		min-height: 100%;
 		position: relative;
 		display: grid;
-		place-items: center;
 		@include medium-up {
-			width: 500px;
+			margin: auto;
+			min-width: 500px;
 		}
+	}
+	.logo {
+		margin: auto;
 	}
 	.btns {
 		width: 100%;
 		position: absolute;
 		bottom: 0;
 		display: grid;
-		grid-auto-flow: column;
-		column-gap: 16px;
+		gap: 16px;
+		@include medium-up {
+			grid-auto-flow: column;
+		}
 	}
 	* :global {
 		@include common-app;
