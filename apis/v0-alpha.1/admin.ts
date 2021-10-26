@@ -258,9 +258,13 @@ const route: FastifyPluginAsync = async (server, opts) => {
 			for await (const part of request.files()) {
 				const id = +part.fieldname;
 				const filename = path.join(id + path.extname(part.filename));
-				part.file.pipe(
-					fs.createWriteStream(path.join(slide_image_path, filename))
-				);
+				await new Promise<void>((resolve) => {
+					part.file
+						.pipe(fs.createWriteStream(path.join(slide_image_path, filename)))
+						.on('finish', () => {
+							resolve();
+						});
+				});
 				const slide = data.slides.find((slide) => slide.id == id) as any;
 				if (slide) {
 					slide.src = path.join(slide_image_static_path, filename);
