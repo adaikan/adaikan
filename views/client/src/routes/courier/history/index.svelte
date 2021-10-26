@@ -7,23 +7,15 @@
 		Footer,
 		Card,
 		List,
-		ListItemGroup,
 		ListItem,
-		Avatar,
-		Badge,
 		Chip,
 	} from 'svelte-materialify/src';
 	import {
 		mdiChevronLeft,
-		mdiMapMarkerRadiusOutline,
-		mdiTruckDeliveryOutline,
 		mdiHistory,
-		mdiClose,
 		mdiHomeOutline,
-		mdiAccount,
 		mdiAccountCogOutline,
 		mdiCubeOutline,
-		mdiMapMarkerOutline,
 		mdiMessageTextOutline,
 	} from '@mdi/js';
 	import ProgressLinear from '$components/progress-linear.svelte';
@@ -32,12 +24,8 @@
 
 	import { getContext, onMount, onDestroy } from 'svelte';
 	import { slide } from 'svelte/transition';
-	import { writable } from 'svelte/store';
-	import { browser } from '$app/env';
-	import { wait, Diff, Currency } from '$lib/helper';
 	import { goto } from '$app/navigation';
 	import { page } from '$app/stores';
-	import { base } from '$app/paths';
 
 	import type { CourierClientApi } from '../__layout.svelte';
 
@@ -166,6 +154,17 @@
 	<MaterialAppMin>
 		<ProgressLinear bind:this="{loader}" />
 		<AppBar class="primary-color {$isLoading ? 'top-4' : ''}">
+			<span slot="icon">
+				<Button
+					fab
+					icon
+					text
+					size="small"
+					on:click="{() => window.history.back()}"
+				>
+					<Icon path="{mdiChevronLeft}" />
+				</Button>
+			</span>
 			<span slot="title">{title}</span>
 		</AppBar>
 		<main>
