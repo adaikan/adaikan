@@ -77,7 +77,7 @@
 					password,
 				});
 			} else {
-				throw new Error("Unknown Role");
+				throw new Error('Unknown Role');
 			}
 			alert.setState('success');
 			alert.setText('Berhasil Masuk');
@@ -307,10 +307,13 @@
 								</div>
 							</TextField>
 							<div class="t-end f-14">
-								<a
-									class="{$is_desktop ? 'black-text' : 'white-text'}"
-									href="/entry/reset/step-1">Lupa Password?</a
-								>
+								{#if role == 'buyer'}
+									<a
+										transition:fade
+										class="{$is_desktop ? 'black-text' : 'white-text'}"
+										href="/entry/reset/step-1">Lupa Password?</a
+									>
+								{/if}
 							</div>
 						</div>
 					</div>

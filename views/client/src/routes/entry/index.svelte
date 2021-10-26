@@ -4,21 +4,15 @@
 		MaterialAppMin,
 		ProgressLinear,
 		AppBar,
-		Footer,
 		Button,
 		Icon,
-		Textarea,
 	} from 'svelte-materialify/src';
 	import {
 		mdiChevronLeft,
-		mdiChevronRight,
-		mdiStarOutline,
-		mdiStar,
 	} from '@mdi/js';
 	import { goto } from '$app/navigation';
 	import { onMount, onDestroy, getContext } from 'svelte';
 	import { writable } from 'svelte/store';
-	import { cubicIn } from 'svelte/easing';
 	import { fade, slide, scale } from 'svelte/transition';
 
 	let theme = writable<'light' | 'dark'>('light');
@@ -44,7 +38,7 @@
 
 <svelte:head>
 	<title>Entry</title>
-	<meta name="" content="" />
+	<meta name="description" content="Entry" />
 </svelte:head>
 
 <div transition:fade>
