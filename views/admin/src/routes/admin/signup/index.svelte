@@ -7,6 +7,9 @@
 	import { goto } from '$app/navigation';
 
 	import type { ClientApi, User } from '../__layout.svelte';
+
+	const title = 'Sign Up';
+	const desc = '';
 </script>
 
 <script lang="ts">
@@ -55,6 +58,11 @@
 		}
 	}
 </script>
+
+<svelte:head>
+	<title>{title}</title>
+	<meta name="description" content={desc} />
+</svelte:head>
 
 <div transition:fade class="page p-8 bg-gray-200 dark:bg-gray-800 place-content-center">
 	<Progress bind:this={loader} fixed />
