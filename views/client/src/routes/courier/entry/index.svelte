@@ -1,27 +1,19 @@
 <script context="module" lang="ts">
-	// import logo from '$static/logo/logo.png';
+	import logo from '$static/logo.png';
 	import {
 		MaterialAppMin,
 		ProgressLinear,
 		AppBar,
-		Footer,
 		Button,
 		Icon,
-		Textarea,
 	} from 'svelte-materialify/src';
 	import {
 		mdiChevronLeft,
-		mdiChevronRight,
-		mdiStarOutline,
-		mdiStar,
 	} from '@mdi/js';
 	import { goto } from '$app/navigation';
 	import { onMount, onDestroy, getContext } from 'svelte';
 	import { writable } from 'svelte/store';
-	import { cubicIn } from 'svelte/easing';
 	import { fade, slide, scale } from 'svelte/transition';
-
-	import { logo } from './_layout.svelte';
 
 	let theme = writable<'light' | 'dark'>('light');
 	let showProgress = writable(true);
@@ -45,8 +37,8 @@
 </script>
 
 <svelte:head>
-	<title>Entry</title>
-	<meta name="" content="" />
+	<title>Entry Kurir</title>
+	<meta name="description" content="Entry Kurir" />
 </svelte:head>
 
 <div transition:fade>
@@ -74,7 +66,7 @@
 						width="150"
 						height="150" />
 					<div class="btns">
-						<Button depressed on:click="{() => goto('/courier/entry/login')}"
+						<Button depressed on:click="{() => goto('/entry/login?role=courier')}"
 							>Masuk</Button>
 						<Button depressed on:click="{() => goto('/courier/entry/register')}"
 							>Daftar</Button>
@@ -92,19 +84,31 @@
 		min-height: 100vh;
 		padding: 32px;
 		display: grid;
+		@include small-up {
+			padding: 32px 15%;
+		}
 	}
 	.surface {
+		min-height: 100%;
 		position: relative;
 		display: grid;
-		place-items: center;
+		@include medium-up {
+			margin: auto;
+			min-width: 500px;
+		}
+	}
+	.logo {
+		margin: auto;
 	}
 	.btns {
 		width: 100%;
 		position: absolute;
 		bottom: 0;
 		display: grid;
-		grid-auto-flow: column;
-		column-gap: 16px;
+		gap: 16px;
+		@include medium-up {
+			grid-auto-flow: column;
+		}
 	}
 	* :global {
 		@include common-app;
