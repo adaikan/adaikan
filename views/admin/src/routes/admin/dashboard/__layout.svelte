@@ -5,7 +5,6 @@
 	import Splash from './_splash.svelte';
 
 	import { goto } from '$app/navigation';
-	import { base } from '$app/paths';
 
 	import type { ClientApi, User } from '../__layout.svelte';
 </script>
@@ -19,7 +18,7 @@
 	$: {
 		if (e_type) {
 			if (e_type == client.stdApi.Error.FailedAuthentication.type) {
-				goto(base + '/signup');
+				goto('/admin/signup');
 			}
 		}
 	}

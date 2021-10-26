@@ -20,7 +20,6 @@
 
 	import { page } from '$app/stores';
 	import { goto } from '$app/navigation';
-	import { base } from '$app/paths';
 
 	import { Currency, Diff, wait } from '$lib/helper';
 
@@ -552,7 +551,7 @@
 										<ListItem>
 											<button
 												type="button"
-												on:click={() => goto(base + '/chat?connect_with=' + contact.nodeId)}
+												on:click={() => goto('/admin/chat?connect_with=' + contact.nodeId)}
 												class="w-full p-3 hover:bg-gray-400 dark:hover:bg-gray-500"
 												>{contact.name}</button
 											>
