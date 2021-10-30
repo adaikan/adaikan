@@ -13,6 +13,7 @@ interface ImportMetaEnv {
 	VITE_SERVER_STATIC_PATH: string;
 	VITE_CLIENT_FETCH_MODE: RequestMode;
 	VITE_CLIENT_BUILD_DIR: string;
+	VITE_LANDING_URL: string;
 	VITE_MAP_KEY: string;
 	VITE_EMAIL_KEY: string;
 	VITE_PAYMENT_KEY: string;
