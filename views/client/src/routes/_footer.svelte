@@ -12,6 +12,8 @@
 
 	import logo from '$static/logo.png';
 
+	import { LANDING_URL } from '$lib/env';
+
 	import { page } from '$app/stores';
 
 	import navigation from '$lib/main-nav';
@@ -20,15 +22,23 @@
 <script lang="ts">
 	export let desktop = false;
 	const footer_navigation = [
-		{ name: 'Tentang Ada Ikan', link: '/' },
-		{ name: 'Fitur', link: '/chat' },
-		{ name: 'Cara Kerja', link: '' },
-		{ name: 'Tim Pengembang', link: '/cart' },
+		{ name: 'Tentang Ada Ikan', link: `${LANDING_URL}#about` },
+		{ name: 'Fitur', link:  `${LANDING_URL}#features` },
+		{ name: 'Cara Kerja', link:  `${LANDING_URL}#how_work` },
+		{ name: 'Tim Pengembang', link:  `${LANDING_URL}#team` },
 	];
 	const media_social = [
-		{ name: 'facebook', link: '/', icon: mdiFacebook },
-		{ name: 'instagram', link: '/', icon: mdiInstagram },
-		{ name: 'email', link: '/', icon: mdiEmailOutline },
+		{
+			name: 'facebook',
+			link: 'https://web.facebook.com/profile.php?id=100070789985049',
+			icon: mdiFacebook,
+		},
+		{
+			name: 'instagram',
+			link: 'https://instagram.com/arwana_startup/',
+			icon: mdiInstagram,
+		},
+		{ name: 'email', link: 'adaikanstartup@gmail.com', icon: mdiEmailOutline },
 	];
 	const pathname = $page.path;
 </script>
@@ -174,7 +184,7 @@
 				<ul>
 					{#each footer_navigation as item}
 						<li>
-							<a href="{item.link}"
+							<a rel="external" href="{item.link}"
 								>{item.name}
 								<div class="{pathname == item.link ? 'active' : ''}"></div>
 							</a>
@@ -215,12 +225,12 @@
 			<Icon size="{44}" path="{mdiClockOutline}" style="color: currentColor;" />
 			<time>
 				<div>Jam Kerja</div>
-				<div>(Setiap hari /07:00 - 22:00)</div>
+				<div>(Setiap hari 07:00 - 22:00)</div>
 			</time>
 		</div>
 	</div>
 	<div class="copy">
-		<p>Copyright 2021 Ada Ikan - Arwana, All Right Reserved</p>
+		<p>Copyright &copy; 2021 Ada Ikan - Arwana, All Right Reserved.</p>
 	</div>
 </footer>
 

@@ -4,6 +4,8 @@
 	import { AppBar, Button, Icon, TextField } from 'svelte-materialify/src';
 	import { mdiChevronLeft, mdiMagnify } from '@mdi/js';
 
+	import { LANDING_URL } from '$lib/env';
+
 	import { page } from '$app/stores';
 
 	import logo from '$static/logo.png';
@@ -19,7 +21,7 @@
 	const navigation = [
 		{ name: 'Home', link: '/' },
 		{ name: 'Pesan', link: '/chat' },
-		{ name: 'Tentang Kami', link: '' },
+		{ name: 'Tentang Kami', link: `${LANDING_URL}#about` },
 		{ name: 'Troli', link: '/cart' },
 		{ name: 'Akun', link: '/account' },
 	];
