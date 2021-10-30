@@ -146,6 +146,7 @@
 		display: grid;
 		column-gap: 16px;
 		grid-auto-flow: column;
+		color: var(--text-primary-darken);
 		@include very-small-only {
 			grid-template-columns: 1fr 1fr;
 		}
@@ -228,9 +229,8 @@
 			font-size: 14.8px;
 			font-weight: 500;
 			padding: 0 8px;
-			border-left: 2px black solid;
-			border-right: 2px black solid;
+			border-left: 2px var(--text-primary-darken) solid;
+			border-right: 2px var(--text-primary-darken) solid;
 		}
 	}
-	// :global {}
 </style>

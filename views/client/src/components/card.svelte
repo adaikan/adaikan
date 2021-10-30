@@ -45,6 +45,7 @@
 		border: 2px solid transparent;
 		border-radius: 6px;
 		transition: all 250ms ease;
+		color: var(--text-primary-darken);
 		background-color: white;
 		&:hover {
 			border: 2px solid var(--primary-color);

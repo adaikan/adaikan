@@ -317,6 +317,7 @@
 	.main {
 		padding: 32px 16px 16px;
 		display: grid;
+		color: var(--text-primary-darken);
 		@include main;
 	}
 	.form {

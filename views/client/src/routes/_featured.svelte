@@ -26,6 +26,7 @@
 		border-radius: 6px;
     font-size: 18px;
     font-weight: 600;
+		color: var(--text-primary-darken);
 		background-color: white;
 		img {
 			object-fit: cover;
