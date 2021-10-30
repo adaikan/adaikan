@@ -129,7 +129,7 @@
 		} catch (error: any) {
 			console.error(error);
 		} finally {
-			progress.showing();
+			progress.hiding();
 		}
 	}
 	async function service_change() {
