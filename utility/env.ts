@@ -43,11 +43,12 @@ export class EnvConfig {
 			DEV: production != true,
 			PROD: production,
 			NODE_ENV: production ? 'production' : 'development',
+
 			SERVER_ENV: production ? 'production' : 'development',
 			SERVER_CONTEXT: global ? 'global' : 'local',
 			SERVER_ARCH: arch,
 			SERVER_DOMAIN: '',
-			SERVER_URL: 'http://localhost:3000',
+			SERVER_URL: 'http://localhost',
 
 			SERVER_PROTOCOL: PROTOCOL,
 			SERVER_HOSTNAME: HOSTNAME,
@@ -83,11 +84,11 @@ export class EnvConfig {
 			VAPID_PUBLIC_KEY_DIR: PROJECT_ROOT_DIR,
 			VAPID_PRIVATE_KEY_DIR: PROJECT_ROOT_DIR,
 
+			LANDING_URL: '/',
 			SECRET_KEY:
 				'tu6rWzYGZpgFTahK27P63XIYHKFtYMg627JbESd4qZtboAYjYu0t9UNkTxUUyg3LVlqDj5yCwdfI9SGtCEgiN++s0zExs5CVB98Xf2GVaOSq+B2EgNF0F1PrzdxghfKJR/g5la6Ulh37q7vFMLlnUJJOryHJjANsoZFZmw7vyQgpcNFwmL+IyK14KjYq3pOkxZynZ95ybBKNnzqCzOu+bzNmARa5VQ8MrxYug7aODQt1MwwCWoyy9WkuJ/yFH/dK5YVK8wUxsztZ1+zyjNTEeYCRia2BmyupfsMWieEWtD9szvG4jATsSvAP94btv3OLRJbHIZc5HWzqYYp+qUFU4g==',
 			DATABASE_URL:
 				'postgresql://postgres:postgres@localhost:5432/ada_ikan_webapp',
-			SHADOW_DATABASE_URL: '',
 			EMAIL_URL: 'smtp://bladerlaiga.97@gmail.com:rZyUKSbEtzWgPkTV@smtp-relay.sendinblue.com:587',
 			EMAIL_KEY: 'rZyUKSbEtzWgPkTV',
 			PAYMENT_KEY: '',
@@ -105,6 +106,7 @@ export class EnvConfig {
 			VITE_SERVER_STATIC_PATH: appEnv.SERVER_STATIC_PATH,
 			VITE_CLIENT_FETCH_MODE: appEnv.CLIENT_FETCH_MODE,
 			VITE_CLIENT_BUILD_DIR: appEnv.CLIENT_BUILD_DIR,
+			VITE_LANDING_URL: appEnv.LANDING_URL,
 			VITE_MAP_KEY: appEnv.MAP_KEY,
 			VITE_EMAIL_KEY: appEnv.EMAIL_KEY,
 			VITE_PAYMENT_KEY: appEnv.PAYMENT_KEY,
