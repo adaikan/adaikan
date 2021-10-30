@@ -355,31 +355,51 @@ export class Seed {
 					update: {},
 					where: { id: 2 },
 				});
-
-				await fs.writeJson(path.join(PROJECT_ROOT_DIR, 'data.json'), {
-					business: {
-						productPriceIncrease: 500,
-						productPriceIncreaseActive: false,
-						deliveryCostCalculatePerDistance: 1000,
-						deliveryCostCalculatePerDistanceActive: true,
-						deliveryCostCalculatePerWeight: 0,
-						deliveryCostCalculatePerWeightActive: false,
-					},
-					model: {
-						open: false,
-						openBy: '',
-						openAt: '',
-						link: '',
-					},
-					slides: [],
-				});
-
-				await fs.promises.writeFile(
-					path.join(SERVER_PUBLIC_DIR, 'seed.json'),
-					JSON.stringify(fake, undefined, '\t')
-				);
 			} else {
+				fake.internal[0] = await orm.internal.upsert({
+					create: {
+						access: {},
+						password: await bcrypt.hash('Admin', salt),
+						role: 'internal',
+						username: 'Admin',
+						chatNode: {
+							create: {
+								role: 'internal',
+								name: 'Admin',
+								type: 'PerToGroup',
+								image: (faker.image as any).lorempixel.business(),
+								channel: { create: { type: 'PerToGroup' } },
+							},
+						},
+					},
+					update: {},
+					where: { id: 1 },
+					include: { chatNode: { include: { channel: true } } },
+				});
 			}
+
+			await fs.writeJson(path.join(PROJECT_ROOT_DIR, 'data.json'), {
+				business: {
+					productPriceIncrease: 500,
+					productPriceIncreaseActive: false,
+					deliveryCostCalculatePerDistance: 1000,
+					deliveryCostCalculatePerDistanceActive: true,
+					deliveryCostCalculatePerWeight: 0,
+					deliveryCostCalculatePerWeightActive: false,
+				},
+				model: {
+					open: false,
+					openBy: '',
+					openAt: '',
+					link: '',
+				},
+				slides: [{ id: 0, src: '', href: '' }],
+			});
+
+			await fs.promises.writeFile(
+				path.join(SERVER_PUBLIC_DIR, 'seed.json'),
+				JSON.stringify(fake, undefined, '\t')
+			);
 
 			console.log(
 				chalk.bgBlack.white`Seeding Database`,
