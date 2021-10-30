@@ -39,6 +39,28 @@ export default class App {
 				: {
 						prettyPrint: { colorize: true },
 						file: path.join(env.SERVER_LOGS_DIR, 'server.log'),
+						serializers: {
+							req(request) {
+								const remote = `${
+									request.raw.socket.remoteAddress ?? '0.0.0.0'
+								}:${request.raw.socket.remotePort ?? 0}`;
+								return {
+									method: request.method,
+									url: request.url,
+									hostname: request.hostname,
+									remote,
+									forwarded: request.headers.forwarded,
+								};
+							},
+							res(response) {
+								const { request } = response;
+								return {
+									method: request.method,
+									statusCode: response.statusCode,
+									url: request.url,
+								};
+							},
+						},
 				  },
 		});
 	}
@@ -61,35 +83,8 @@ export default class App {
 		try {
 			console.log(chalk.bgBlack.white`Setup Server`, chalk.blue`[*]`);
 
-			await this.app.register(import('fastify-cors'), {
-				origin: env.SERVER_ALLOWED_ORIGINS
-					? env.SERVER_ALLOWED_ORIGINS.split(',')
-					: [],
-				credentials: true,
-			});
 			await this.app.register(import('fastify-metrics'), {
 				endpoint: '/server/metrics',
-			});
-			await this.app.register(import('fastify-swagger'), {
-				routePrefix: '/server/docs',
-				swagger: {
-					swagger: '2.0',
-					host:
-						env.SERVER_ENV == 'production'
-							? env.SERVER_DOMAIN
-							: env.SERVER_HOST,
-					info: {
-						title: 'Ada Ikan API Documentations',
-						description: '',
-						version: '0.1.0',
-						contact: {
-							name: 'Anas Mubarak Yasin',
-							email: 'bladerlaiga.97@gmail.com',
-						},
-					},
-					tags: [],
-				},
-				exposeRoute: true,
 			});
 			await this.app.register(import('fastify-multipart'), {
 				limits: { fileSize: 10_000_000 },
@@ -146,21 +141,13 @@ export default class App {
 	}
 	public async up() {
 		try {
-			this.app.mail.listen({});
+			this.app.mail.listen();
 			this.app.wss.listen({ server: this.app.server });
+			await this.app.listen(env.SERVER_PORT, env.SERVER_HOSTNAME);
 
-			const address = await this.app.listen(
-				env.SERVER_PORT,
-				env.SERVER_HOSTNAME
-			);
-
-			console.log(
-				chalk.bgBlack.white`Server Up listening on`,
-				chalk.blue`${address}`,
-				chalk.green`[*]`
-			);
+			console.log(chalk.white`Server Up`, chalk.green`[*]`);
 		} catch (error: any) {
-			console.log(chalk.bgBlack.white`Server Up Failed`, chalk.red`[*]`);
+			console.log(chalk.white`Server Up Failed`, chalk.red`[*]`);
 
 			console.error(error);
 
