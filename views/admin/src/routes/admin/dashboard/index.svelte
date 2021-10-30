@@ -16,7 +16,7 @@
 
 	import { goto } from '$app/navigation';
 
-	import type { ClientApi, User } from '../__layout.svelte';
+	import type { ClientApi, User, Service } from '../__layout.svelte';
 
 	const title = 'Dashboard';
 	const desc = '';
@@ -25,6 +25,7 @@
 <script lang="ts">
 	const client = getContext<ClientApi>('clientApi');
 	const user = getContext<User>('user');
+	const service = getContext<Service>('service');
 	const event = client.admin.event;
 
 	let mode = 'dark';
@@ -43,9 +44,9 @@
 			await client.ready;
 
 			if (!user_login) {
-				return goto('/admin', {replaceState: true});
+				return goto('/admin', { replaceState: true });
 			}
-			
+
 			account = {
 				image: user_login.image ?? '',
 				name: user_login.username,
@@ -58,6 +59,9 @@
 			event.addEventListener('message', async (event) => {
 				stat = await client.admin.stat();
 			});
+
+			service.register('/service-worker.js');
+			service.subscribe({ role: 'internal', userId: user_login.id, nodeId: user_login.chatNodeId });
 		} catch (error: any) {
 			console.error(error);
 		} finally {
