@@ -7,7 +7,7 @@ declare module 'fastify' {
 	interface FastifyInstance {
 		mail: {
 			send(options: SendOptions): Promise<any>;
-			listen(options: ListenOptions): void;
+			listen(port?: number, host?: string): void;
 		};
 	}
 }
@@ -17,13 +17,13 @@ interface Plugin extends FastifyPluginAsync<Options> {}
 
 const name = 'mail';
 const plugin: Plugin = async (server, opts) => {
+	Mail.setup({
+		app: server,
+		...opts,
+	});
 	server.decorate(name, {
-		listen(options: ListenOptions) {
-			Mail.setup({
-				app: server,
-				...opts,
-				...options,
-			});
+		listen(port?: number, host?: string) {
+			return Mail.listen(port, host);
 		},
 		send(options: SendOptions) {
 			return Mail.send(options);
