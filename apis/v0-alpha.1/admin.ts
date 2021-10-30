@@ -207,7 +207,53 @@ const route: FastifyPluginAsync = async (server, opts) => {
 		method: 'PATCH',
 		handler: async (request, reply) => {
 			const user = await request.identify('internal');
-			reply.ok();
+			const result = await orm.internal.findUnique({
+				where: { id: user.sub },
+			});
+			if (!result) {
+				throw Api.Error.FailedAuthentication('Unknown User');
+			}
+			const data = await data_store.load();
+			if (request.body.open) {
+				const studio = spawn('npm run pm2:start:model', [], {
+					cwd: PROJECT_ROOT_DIR,
+					shell: true,
+					stdio: 'inherit',
+					detached: true,
+				});
+
+				studio.on('spawn', async () => {
+					data.model.open = true;
+					data.model.link = request.headers.host ?? 'localhost';
+					data.model.openBy = result.username;
+					data.model.openAt = new Date().toISOString();
+
+					await data_store.save();
+
+					reply.ok(data.model);
+					event.emit('data:changed', data);
+				});
+			} else {
+				const studio = spawn('npm run pm2:stop:model', [], {
+					cwd: PROJECT_ROOT_DIR,
+					shell: true,
+					stdio: 'inherit',
+					detached: true,
+				});
+
+				studio.on('spawn', async () => {
+					data.model.open = false;
+					data.model.link = '';
+					data.model.openBy = '';
+					data.model.openAt = '';
+
+					await data_store.save();
+
+					reply.ok(data.model);
+					event.emit('data:changed', data);
+				});
+			}
+			return reply;
 		},
 		schema: {},
 	});
@@ -568,8 +614,7 @@ const route: FastifyPluginAsync = async (server, opts) => {
 		method: 'GET',
 		handler: async (request, reply) => {
 			const user = await request.identify('internal');
-			const dir = path.join(SERVER_LOGS_DIR, 'server.log');
-			reply.download(dir);
+			reply.send(fs.createReadStream(path.join(SERVER_LOGS_DIR, 'server.log')));
 		},
 		schema: {},
 	});
@@ -578,8 +623,7 @@ const route: FastifyPluginAsync = async (server, opts) => {
 		method: 'DELETE',
 		handler: async (request, reply) => {
 			const user = await request.identify('internal');
-			const dir = path.join(SERVER_LOGS_DIR, 'server.log');
-			await fs.writeFile(dir, '');
+			await fs.writeFile(path.join(SERVER_LOGS_DIR, 'server.log'), '');
 			reply.ok(true);
 		},
 		schema: {},
