@@ -19,10 +19,6 @@ const plugin: Plugin = async (server, opts) => {
 
 	await orm.$connect();
 
-	server.get('/server/orm', async (request, reply) => {
-		reply.redirect(303, 'http://localhost:5555');
-	})
-
 	server.decorate(name, orm);
 	server.addHook('onClose', async () => {
 		await orm.$disconnect();
