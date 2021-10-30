@@ -17,14 +17,9 @@ interface Plugin extends FastifyPluginAsync<Options> {}
 
 const name = 'info';
 const plugin: Plugin = async (app, opts) => {
-	const { orm, event } = app;
+	const { orm, event, mail } = app;
 	const {
-		env: {
-			SERVER_PUBLIC_DIR,
-			VAPID_PUBLIC_KEY_DIR,
-			VAPID_PRIVATE_KEY_DIR,
-			SERVER_URL,
-		},
+		env: { VAPID_PUBLIC_KEY_DIR, VAPID_PRIVATE_KEY_DIR, SERVER_URL },
 	} = process as Env<typeof EnvJson>;
 	const modelSubscriber = new SubscriberModel(orm);
 	const web_push_public_key = await fs.readFile(
@@ -39,42 +34,6 @@ const plugin: Plugin = async (app, opts) => {
 		web_push_public_key.toString(),
 		web_push_private_key.toString()
 	);
-
-	app.get('/server/info', async (request, reply) => {
-		const info = JSON.stringify(
-			{
-				version: app.version,
-				pwd: process.cwd(),
-				dirtree: glob.sync('**', {
-					ignore: ['node_modules', '**/node_modules/**'],
-					cwd: process.cwd(),
-				}),
-				environment: process.env,
-			},
-			undefined,
-			'\t'
-		);
-		reply.header('Content-Type', 'text/html; charset=utf-8').send(`
-        <script>
-          const info = ${info};
-          console.log(info);
-        </script>
-        <style>
-          pre {
-            line-height: 2.0;
-          }
-        </style>
-        <pre>
-          <code>
-            ${info}
-          </code>
-          plugins <br/>
-          ${app.printPlugins().replace(/\n/g, '<br/>')}
-          routes <br/>
-          ${app.printRoutes({ commonPrefix: true }).replace(/\n/g, '<br/>')}
-        </pre>
-    `);
-	});
 
 	app.route<{
 		Body: {};
@@ -183,14 +142,25 @@ const plugin: Plugin = async (app, opts) => {
 		schema: {},
 	});
 	app.route<{
-		Body: {};
+		Body: {
+			name: string;
+			from: string;
+			to: string;
+			subject: string;
+			message: string;
+		};
 	}>({
-		url: `/server/ping`,
+		url: `/server/contact`,
 		method: 'POST',
 		handler: async (request, reply) => {
-			const user = await request.identify();
-			console.log('[client] ping');
-			reply.send('pong');
+			await mail.send({
+				from: request.body.from,
+				to: request.body.to,
+				subject: request.body.subject,
+				text: request.body.message,
+				replyTo: request.body.from,
+			});
+			reply.ok();
 		},
 		schema: {},
 	});
