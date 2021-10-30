@@ -43,7 +43,7 @@
 			client
 				.auth()
 				.then(async (user) => {
-					await service.register('service-worker.js');
+					await service.register('/service-worker.js');
 					await service.subscribe({role: 'buyer', userId: user.id, nodeId: user.chatNodeId});
 				})
 				.catch(async () => {
@@ -112,8 +112,8 @@
 </style>
 
 <svelte:head>
-	<title>Home</title>
-	<meta name="description" content="ada ikan marketplace" />
+	<title>Beranda Ada Ikan</title>
+	<meta name="description" content="beranda ada ikan, menampilkan katalog tentang ikan" />
 </svelte:head>
 
 <div transition:slide>
