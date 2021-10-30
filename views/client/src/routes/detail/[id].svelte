@@ -63,7 +63,7 @@
 
 			await client.auth();
 
-			goto('/chat/' + product.store.chatNodeId);
+			goto('/chat?connectTo=' + product.store.chatNodeId);
 		} catch (error: any) {
 			if (error.type == client.Error.FailedAuthentication.type) {
 				snackbar.setText('Belum masuk');
@@ -208,6 +208,9 @@
 	.t-400 {
 		font-weight: 400;
 	}
+	.t-primary-darken {
+		color: var(--text-primary-darken);
+	}
 	.p-8 {
 		opacity: 0.8;
 	}
@@ -270,7 +273,7 @@
 </style>
 
 <svelte:head>
-	<title>Detail</title>
+	<title>Ikan {product?.name} | Detail</title>
 	<meta name="description" content="{product?.name} {product?.description}" />
 </svelte:head>
 
@@ -304,17 +307,17 @@
 					{/if}
 					<figcaption class="{$is_desktop ? 'card' : ''}">
 						<section class="subsection">
-							<h1 class="t-20 t-700">{product.name}</h1>
+							<h1 class="t-20 t-700 t-primary-darken">{product.name}</h1>
 							<section class="subsection">
-								<div class="t-16 t-500">{toMoney(product.price)}</div>
+								<div class="t-16 t-500 t-primary-darken">{toMoney(product.price)}</div>
 								<div class="">
-									<Icon path="{mdiStorefrontOutline}" />
+									<Icon path="{mdiStorefrontOutline}"/>
 									<span class="t-16 p-8">
 										{product.store.name}
 									</span>
 								</div>
 								<div class="">
-									<Icon path="{mdiMapMarkerOutline}" />
+									<Icon path="{mdiMapMarkerOutline}"/>
 									<span class="t-16 p-8">
 										{product.store.area}, {product.store.local}, {product.store
 											.place}
@@ -323,7 +326,7 @@
 							</section>
 						</section>
 						<section class="subsection">
-							<h2 class="t-18 t-500">Informasi Produk</h2>
+							<h2 class="t-18 t-500 t-primary-darken">Informasi Produk</h2>
 							<section class="subsection">
 								<div class="column t-14 p-8">
 									<span>Berat</span>
