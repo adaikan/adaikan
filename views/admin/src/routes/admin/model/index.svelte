@@ -57,6 +57,8 @@
 
 					disable = true;
 
+					config = await client.admin.setModel(config);
+
 					Diff.objectAssign(copy, config);
 				} catch (error: any) {
 					errorText = error.message;
