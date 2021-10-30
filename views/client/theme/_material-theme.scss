@@ -6,6 +6,8 @@ $info-color: #00bcd4;
 $warning-color: #fb8c00;
 $error-color: #f44336;
 
+$text-primary-darken: #012970;
+
 $font-size-root: 16px;
 $border-radius-root: 4px;
 $line-height-root: 1.5;
@@ -55,4 +57,5 @@ $material-dark-theme: ();
   --primary-color: #{$primary-color};
   --secondary-color: #{$secondary-color};
   --tertiary-color: #{$tertiary-color};
+  --text-primary-darken: #{$text-primary-darken};
 }
