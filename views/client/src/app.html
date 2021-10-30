@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="id">
 	<head>
 		<meta charset="utf-8" />
 		<link rel="icon" href="/logo.png" />
@@ -21,5 +21,14 @@
 	</head>
 	<body>
 		%svelte.body%
+		<script src="https://www.googletagmanager.com/gtag/js?id=G-BDM7PE40V2"></script>
+		<script>
+			window.dataLayer = window.dataLayer || [];
+			function gtag() {
+				dataLayer.push(arguments)
+			}
+			gtag('js', new Date());
+			gtag('config', 'G-BDM7PE40V2');
+		</script>
 	</body>
 </html>
