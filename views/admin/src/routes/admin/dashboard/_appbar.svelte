@@ -152,3 +152,9 @@
 		<div class="text-xs">{account.role}</div>
 	</span>
 </div>
+
+<style lang="scss">
+	.aspect-1 {
+		aspect-ratio: 1;
+	}
+</style>
