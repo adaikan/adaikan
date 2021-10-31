@@ -11,12 +11,14 @@ import { KeyPair } from 'utility/key-pair';
 
 export interface Options {
 	verbose: boolean;
+	proxy: boolean;
 	log: boolean;
 	prefix: string;
 }
 
 export const defaultOptions: Options = {
 	verbose: false,
+	proxy: false,
 	log: true,
 	prefix: '',
 };
@@ -31,9 +33,13 @@ export default class App {
 	constructor(options?: Partial<Options>) {
 		this.options = Object.assign({}, defaultOptions, options);
 
-		console.log(chalk.bgBlack.white`Server Options`, { log: options?.log });
+		console.log(chalk.bgBlack.white`Server Options`, {
+			proxy: options?.proxy,
+			log: options?.log,
+		});
 
 		this.app = Fastify({
+			trustProxy: this.options.proxy,
 			logger: this.options.log
 				? { prettyPrint: { colorize: true } }
 				: {

@@ -8,6 +8,7 @@ import json from 'comment-json';
 const opts = mri(process.argv.slice(2), {
 	default: {
 		prefix: '',
+		proxy: false,
 		log: true,
 		verbose: false,
 	} as Options,
