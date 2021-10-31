@@ -20,14 +20,20 @@ declare module 'fastify' {
 
 interface Options {
 	prefix?: string;
+	ping?: number;
 }
 interface Plugin extends FastifyPluginAsync<Options> {}
 
 class SSE {
 	static connections = new Set<SSEReply>();
-	public prefix;
-	constructor(private app: FastifyInstance, options?: { prefix?: string }) {
+	public prefix = '';
+	public ping = 0;
+	constructor(
+		private app: FastifyInstance,
+		options?: { prefix?: string; ping?: number }
+	) {
 		this.prefix = options?.prefix ?? '';
+		this.ping = options?.ping ?? 59000;
 	}
 	route(route: {
 		path: string;
@@ -41,7 +47,7 @@ class SSE {
 			url: this.prefix + route.path,
 			method: 'GET',
 			handler: (request, reply) => {
-				const sse_reply = new SSEReply(reply);
+				const sse_reply = new SSEReply(reply, { ping: this.ping });
 				route.handler.call(this.app, request, sse_reply);
 			},
 		});
@@ -49,7 +55,11 @@ class SSE {
 }
 
 class SSEReply extends EventEmitter {
-	constructor(private reply: FastifyReply) {
+	public id = 0;
+	constructor(
+		private reply: FastifyReply,
+		public options: { ping?: number } = {}
+	) {
 		super();
 
 		reply.raw.setHeader('Content-Type', 'text/event-stream');
@@ -63,6 +73,36 @@ class SSEReply extends EventEmitter {
 			chalk`Server Sent Event Connection {yellow ${reply.request.method}:} {white ${reply.request.url}} {blue (${SSE.connections.size})} {magenta ${reply.request.ip}}`
 		);
 
+		let id: any = undefined;
+
+		if (options.ping) {
+			if (options.ping < 45000) {
+				options.ping = 59000;
+			}
+			id = setInterval(() => {
+				this.ping('Hello');
+				reply.log.info(
+					chalk`Server Sent Event Ping ` +
+						chalk.yellow`${reply.request.method}: ` +
+						chalk.white`${reply.request.url} ` +
+						chalk.blue`(${SSE.connections.size}) ` +
+						chalk.magentaBright`(${reply.request.ip})`
+				);
+			}, options.ping);
+			this.on('ping', (data) => {
+				reply.log.info(
+					chalk`Web Socket Pong ` +
+						chalk.yellow`${reply.request.method}: ` +
+						chalk.white`${reply.request.url} ` +
+						'{ ' +
+						chalk.white`${data} ` +
+						'} ' +
+						chalk.blue`(${SSE.connections.size}) ` +
+						chalk.magentaBright`(${reply.request.ip})`
+				);
+			});
+		}
+
 		reply.raw.on('error', (error) => {
 			this.emit('error', error);
 		});
@@ -71,6 +111,9 @@ class SSEReply extends EventEmitter {
 			reply.log.info(
 				chalk`Server Sent Event Disconnection {yellow ${reply.request.method}:} {green ${reply.statusCode} -} {white ${reply.request.url}} {blue (${SSE.connections.size})} {magenta ${reply.request.ip}}`
 			);
+			if (id) {
+				clearInterval(id);
+			}
 			this.emit('close');
 			this.clean();
 		});
@@ -100,6 +143,11 @@ class SSEReply extends EventEmitter {
 			this.reply.raw.removeAllListeners();
 			this.removeAllListeners();
 		});
+		return this;
+	}
+	public ping(data: string) {
+		this.send({ type: 'ping', id: this.id++ }, data);
+		this.emit('ping', data);
 		return this;
 	}
 }
