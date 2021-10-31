@@ -32,12 +32,12 @@ export interface SendOptions {
 	text?: string;
 }
 
-export const defOpts: Options = {
+export const default_options: Options = {
 	verbose: true,
 	url: '',
 	app: null as any,
 	host: '0.0.0.0',
-	port: 25,
+	port: 587,
 };
 
 export class Mail {
@@ -46,11 +46,11 @@ export class Mail {
 	public static client_url =
 		'smtp://username:password@smtp.example.com/?pool=true';
 	public static options: Options;
-	public static setup(opts: Options) {
-		this.options = Object.assign({}, defOpts, opts) as Required<Options>;
+	public static setup(options: Options) {
+		this.options = Object.assign({}, default_options, options) as Required<Options>;
 		const { url, app } = this.options;
-		if (!app) {
-			throw new Error('App on options not exist');
+		if (!app && !url) {
+			throw new Error('App or Url on options not exist');
 		}
 		this.server = new SMTPServer({
 			logger: this.options.verbose,
@@ -93,7 +93,7 @@ export class Mail {
 	}
 	public static async send(options: SendOptions) {
 		this.options.app.log.info(
-			chalk`{white Client Mail Send} {yellow from: ${options.from} to: ${options.to} reply-to ${options.replyTo}}`
+			chalk`{white Client Mail Send} {yellow from: ${options.from} to: ${options.to} reply-to: ${options.replyTo}}`
 		);
 		const message = await this.client.sendMail(options);
 		return message;
