@@ -37,7 +37,7 @@ export const default_options: Options = {
 	url: '',
 	app: null as any,
 	host: '0.0.0.0',
-	port: 587,
+	port: 5020,
 };
 
 export class Mail {
