@@ -213,12 +213,6 @@ export class WSS {
 	static setup(options: Options) {
 		const app = options.app;
 
-		if (options.ping) {
-			if (options.ping < 45000) {
-				options.ping = 59000;
-			}
-		}
-
 		this.server = new WebSocketServer({
 			host: options.host,
 			port: options.port,
@@ -250,20 +244,31 @@ export class WSS {
 					chalk.magentaBright`(${message.socket.remoteAddress})`
 			);
 
-			let id: any = undefined;
-
 			if (options.ping) {
+				if (options.ping < 45000) {
+					options.ping = 59000;
+				}
+				let id: any = undefined;
 				id = setInterval(() => {
 					ws.ping('Hello');
-					app.log.info(
-						chalk`Web Socket Ping ` +
-							chalk.yellow`${message.method}: ` +
-							chalk.white`${message.url} ` +
-							chalk.blue`(${this.server?.clients.size}) ` +
-							chalk.magentaBright`(${message.socket.remoteAddress})`
-					);
 				}, options.ping);
+				ws.once('close', () => {
+					clearInterval(id);
+				})
 			}
+
+			ws.on('ping', (data) => {
+				app.log.info(
+					chalk`Web Socket Ping ` +
+						chalk.yellow`${message.method}: ` +
+						chalk.white`${message.url} ` +
+						'{ ' +
+						chalk.white`${data} ` +
+						'} ' +
+						chalk.blue`(${this.server?.clients.size}) ` +
+						chalk.magentaBright`(${message.socket.remoteAddress})`
+				);
+			});
 
 			ws.on('pong', (data) => {
 				app.log.info(
@@ -288,9 +293,6 @@ export class WSS {
 						chalk.blue`(${this.server?.clients.size}) ` +
 						chalk.magentaBright`(${message.socket.remoteAddress})`
 				);
-				if (id) {
-					clearInterval(id);
-				}
 			});
 
 			this.lookup({ ws, message });
