@@ -85,12 +85,16 @@ export class EnvConfig {
 			VAPID_PRIVATE_KEY_DIR: PROJECT_ROOT_DIR,
 
 			LANDING_URL: '/',
-			SECRET_KEY:
-				'tu6rWzYGZpgFTahK27P63XIYHKFtYMg627JbESd4qZtboAYjYu0t9UNkTxUUyg3LVlqDj5yCwdfI9SGtCEgiN++s0zExs5CVB98Xf2GVaOSq+B2EgNF0F1PrzdxghfKJR/g5la6Ulh37q7vFMLlnUJJOryHJjANsoZFZmw7vyQgpcNFwmL+IyK14KjYq3pOkxZynZ95ybBKNnzqCzOu+bzNmARa5VQ8MrxYug7aODQt1MwwCWoyy9WkuJ/yFH/dK5YVK8wUxsztZ1+zyjNTEeYCRia2BmyupfsMWieEWtD9szvG4jATsSvAP94btv3OLRJbHIZc5HWzqYYp+qUFU4g==',
+			MODEL_URL: '/',
+			ADMIN_URL: '/',
 			DATABASE_URL:
 				'postgresql://postgres:postgres@localhost:5432/ada_ikan_webapp',
-			EMAIL_URL: 'smtp://bladerlaiga.97@gmail.com:rZyUKSbEtzWgPkTV@smtp-relay.sendinblue.com:587',
-			EMAIL_KEY: 'rZyUKSbEtzWgPkTV',
+			EMAIL_URL:
+				'smtp://bladerlaiga.97@gmail.com:xsmtpsib-3fa23fa3f1128d31ac28cac74f3ae2d3f16ec473013b17c9d21d93e63e73b864-0NrwxR8Q6EYLM7kv@smtp-relay.sendinblue.com:587',
+
+			SECRET_KEY:
+				'tu6rWzYGZpgFTahK27P63XIYHKFtYMg627JbESd4qZtboAYjYu0t9UNkTxUUyg3LVlqDj5yCwdfI9SGtCEgiN++s0zExs5CVB98Xf2GVaOSq+B2EgNF0F1PrzdxghfKJR/g5la6Ulh37q7vFMLlnUJJOryHJjANsoZFZmw7vyQgpcNFwmL+IyK14KjYq3pOkxZynZ95ybBKNnzqCzOu+bzNmARa5VQ8MrxYug7aODQt1MwwCWoyy9WkuJ/yFH/dK5YVK8wUxsztZ1+zyjNTEeYCRia2BmyupfsMWieEWtD9szvG4jATsSvAP94btv3OLRJbHIZc5HWzqYYp+qUFU4g==',
+			EMAIL_KEY: '',
 			PAYMENT_KEY: '',
 			MAP_KEY:
 				'pk.eyJ1IjoiYW5hc211YmFyYWt5YXNpbiIsImEiOiJja3Nsd3Z0cWYzMWw1Mm5uNXZubmJ1Ymw3In0.jyHU9ikVYEI2Xgv9FVNDVA',
@@ -100,6 +104,7 @@ export class EnvConfig {
 			VITE_SEVER_CONTEXT: appEnv.SERVER_CONTEXT,
 			VITE_SERVER_ORIGIN: appEnv.SERVER_ORIGIN,
 			VITE_SERVER_DOMAIN: appEnv.SERVER_DOMAIN,
+			VITE_SERVER_URL: appEnv.SERVER_URL,
 			VITE_API_SERVER_BASE_PATH: appEnv.API_SERVER_BASE_PATH,
 			VITE_EVENT_SERVER_BASE_PATH: appEnv.EVENT_SERVER_BASE_PATH,
 			VITE_WS_SERVER_BASE_PATH: appEnv.WS_SERVER_BASE_PATH,
@@ -184,10 +189,10 @@ export class EnvConfig {
 			defOpts,
 			opts
 		) as Required<Options>;
-		const env = fs.readJSONSync(path.resolve(cwd, '.env.json'));
+		const appEnv = fs.readJSONSync(path.resolve(cwd, '.env.json'));
 		for (const [key, value] of Object.entries(data)) {
-			const oldValue = env[key];
-			env[key] = value;
+			const oldValue = appEnv[key];
+			appEnv[key] = value;
 			console.log(
 				chalk.bgBlack.white`Set environment`,
 				oldValue ? chalk.yellow`[=]` : chalk.green`[+]`,
@@ -196,8 +201,33 @@ export class EnvConfig {
 				chalk.blue`${value}`
 			);
 		}
-		fs.writeFileSync(path.resolve(cwd, '.env'), parser(env));
-		fs.writeJSONSync(path.resolve(cwd, '.env.json'), env, { spaces: '\t' });
+		const clientEnv = {
+			VITE_SERVER_ENV: appEnv.SERVER_ENV,
+			VITE_SEVER_CONTEXT: appEnv.SERVER_CONTEXT,
+			VITE_SERVER_ORIGIN: appEnv.SERVER_ORIGIN,
+			VITE_SERVER_DOMAIN: appEnv.SERVER_DOMAIN,
+			VITE_SERVER_URL: appEnv.SERVER_URL,
+			VITE_API_SERVER_BASE_PATH: appEnv.API_SERVER_BASE_PATH,
+			VITE_EVENT_SERVER_BASE_PATH: appEnv.EVENT_SERVER_BASE_PATH,
+			VITE_WS_SERVER_BASE_PATH: appEnv.WS_SERVER_BASE_PATH,
+			VITE_SERVER_STATIC_PATH: appEnv.SERVER_STATIC_PATH,
+			VITE_CLIENT_FETCH_MODE: appEnv.CLIENT_FETCH_MODE,
+			VITE_CLIENT_BUILD_DIR: appEnv.CLIENT_BUILD_DIR,
+			VITE_LANDING_URL: appEnv.LANDING_URL,
+			VITE_MAP_KEY: appEnv.MAP_KEY,
+			VITE_EMAIL_KEY: appEnv.EMAIL_KEY,
+			VITE_PAYMENT_KEY: appEnv.PAYMENT_KEY,
+		};
+		fs.writeFileSync(path.resolve(cwd, '.env'), parser(appEnv));
+		fs.writeJSONSync(path.resolve(cwd, '.env.json'), appEnv, { spaces: '\t' });
+		fs.writeFileSync(
+			path.resolve(cwd, 'views/client', '.env'),
+			parser(clientEnv)
+		);
+		fs.writeFileSync(
+			path.resolve(cwd, 'views/admin', '.env'),
+			parser(clientEnv)
+		);
 		console.log(chalk.bgBlack.white`Set environment`, chalk.green`[Success]`);
 	}
 }
