@@ -73,25 +73,20 @@ class SSEReply extends EventEmitter {
 			chalk`Server Sent Event Connection {yellow ${reply.request.method}:} {white ${reply.request.url}} {blue (${SSE.connections.size})} {magenta ${reply.request.ip}}`
 		);
 
-		let id: any = undefined;
-
 		if (options.ping) {
 			if (options.ping < 45000) {
 				options.ping = 59000;
 			}
+			let id: any = undefined;
 			id = setInterval(() => {
 				this.ping('Hello');
-				reply.log.info(
-					chalk`Server Sent Event Ping ` +
-						chalk.yellow`${reply.request.method}: ` +
-						chalk.white`${reply.request.url} ` +
-						chalk.blue`(${SSE.connections.size}) ` +
-						chalk.magentaBright`(${reply.request.ip})`
-				);
 			}, options.ping);
+			this.once('close', () => {
+				clearInterval(id);
+			});
 			this.on('ping', (data) => {
 				reply.log.info(
-					chalk`Web Socket Pong ` +
+					chalk`Server Sent Event Ping ` +
 						chalk.yellow`${reply.request.method}: ` +
 						chalk.white`${reply.request.url} ` +
 						'{ ' +
@@ -111,9 +106,6 @@ class SSEReply extends EventEmitter {
 			reply.log.info(
 				chalk`Server Sent Event Disconnection {yellow ${reply.request.method}:} {green ${reply.statusCode} -} {white ${reply.request.url}} {blue (${SSE.connections.size})} {magenta ${reply.request.ip}}`
 			);
-			if (id) {
-				clearInterval(id);
-			}
 			this.emit('close');
 			this.clean();
 		});
