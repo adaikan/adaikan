@@ -35,6 +35,7 @@ const route: FastifyPluginAsync = async (server, opts) => {
 			SERVER_PUBLIC_DIR,
 			SERVER_STATIC_PATH,
 			SERVER_LOGS_DIR,
+			MODEL_URL,
 		},
 	} = process as Env<typeof EnvJson>;
 	const api = 'admin';
@@ -224,7 +225,7 @@ const route: FastifyPluginAsync = async (server, opts) => {
 
 				studio.on('spawn', async () => {
 					data.model.open = true;
-					data.model.link = request.headers.host ?? 'localhost';
+					data.model.link = MODEL_URL;
 					data.model.openBy = result.username;
 					data.model.openAt = new Date().toISOString();
 

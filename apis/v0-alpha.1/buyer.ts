@@ -100,10 +100,10 @@ const route: FastifyPluginAsync = async (server, opts) => {
 			server.event.emit(`model:${api}:change`, data);
 
 			await mail.send({
-				from: 'no-reply@adaikan.com',
+				from: `no-reply@` + request.headers.host,
 				to: data.email,
 				priority: 'high',
-				replyTo: 'no-reply@adaikan.com',
+				replyTo: `no-reply@` + request.headers.host,
 				html: otpTemplate(otp),
 			});
 		},
@@ -285,10 +285,10 @@ const route: FastifyPluginAsync = async (server, opts) => {
 					const otp = totp.generate(data.password);
 
 					await mail.send({
-						from: 'no-reply@adaikan.com',
+						from: `no-reply@` + request.headers.host,
 						to: data.email,
 						priority: 'high',
-						replyTo: 'no-reply@adaikan.com',
+						replyTo: `no-reply@` + request.headers.host,
 						html: otpTemplate(otp),
 					});
 					reply.ok(true);
