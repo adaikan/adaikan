@@ -3,6 +3,9 @@ User-agent: *
 Allow: /
 Allow: /entry/*
 Allow: /detail/*
-Disallow: /*
+Disallow: /account/*
+Disallow: /cart
+Disallow: /chat
+Disallow: /order/*
 
 Sitemap: https://adaikan.id/sitemap.txt
