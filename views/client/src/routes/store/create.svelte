@@ -86,7 +86,7 @@
 
 <script lang="ts">
 	let client = getContext<SellerClientApi>('seller');
-	let user: SellerClientApi.Data.Seller;
+	let user: SellerClientApi.Seller;
 	let loader: ProgressLinear;
 	let alert: Alert;
 	let map: MapComponent;
@@ -173,7 +173,10 @@
 				throw new Error('Lokasi tidak dijangkau');
 			}
 			disableSubmit = true;
-			let path = await client.store.uploadImage(`${user.id}/${file.name}`, file);
+			let path = await client.store.uploadImage(
+				`${user.id}/${file.name}`,
+				file
+			);
 			await client.store.create({
 				data: {
 					name,
@@ -185,6 +188,9 @@
 					place: address.place,
 					position: centre.get(),
 					seller: { connect: { id: user.id } },
+					chatNode: {
+						create: { role: 'seller', name, image: path, type: 'PerToPer' },
+					},
 				},
 			});
 			alert.setText('Berhasil');
@@ -231,95 +237,6 @@
 		}
 	}
 </script>
-
-<svelte:head>
-	<title>{title}</title>
-	<meta name="" content="" />
-</svelte:head>
-
-<div transition:fade>
-	<MaterialAppMin>
-		<ProgressLinear bind:this="{loader}" />
-		<AppBar class="primary-color {isLoading ? 'top-4' : ''}">
-			<div slot="icon">
-				<Button
-					text
-					fab
-					size="small"
-					depressed
-					on:click="{() => history.back()}">
-					<Icon path="{mdiChevronLeft}" />
-				</Button>
-			</div>
-			<div slot="title">{title}</div>
-		</AppBar>
-		<main>
-			<form on:submit|preventDefault="{create}">
-				<Alert bind:this="{alert}" />
-				<label class="thumb-wrapper">
-					<input type="file" accept="image/*" capture on:input="{inputFile}" />
-					{#if imageUrl}
-						<img class="thumb" src="{imageUrl}" alt="" />
-					{:else}
-						<Icon size="{56}" path="{mdiImagePlus}" />
-					{/if}
-				</label>
-				<TextField autocomplete="text" outlined bind:value="{name}"
-					>Nama Toko</TextField>
-				{#if browser}
-					<div class="map">
-						<div class="pin">
-							<Icon path="{mdiMapMarker}" size="{48}" class="primary-text" />
-						</div>
-						<Map
-							accessToken="{MAP_KEY}"
-							style="mapbox://styles/mapbox/streets-v11"
-							bind:this="{map}"
-							zoom="{CONST.zoom}"
-							center="{CONST.center}"
-							on:drag="{moving}"
-							on:recentre="{recenter}">
-							<NavigationControl />
-							<GeolocateControl on:geolocate="{geolocating}" />
-							<ScaleControl />
-						</Map>
-					</div>
-				{:else}
-					<div class="map loading"></div>
-				{/if}
-				<Menu offsetY bind:active="{menuActive}" closeOnClick>
-					<span slot="activator">
-						<Textarea
-							autogrow
-							rows="{3}"
-							outlined
-							autocomplete="address"
-							bind:value="{myAddress}"
-							clearable>Alamat</Textarea>
-					</span>
-					<ListItemGroup bind:value="{myAddress}">
-						{#each addressList as item}
-							<ListItem
-								value="{item.value}"
-								active="{item.value == myAddress}"
-								on:click="{() => {
-									flyTo([item.center[0], item.center[1]]);
-								}}">
-								{item.name}
-							</ListItem>
-						{/each}
-					</ListItemGroup>
-				</Menu>
-				<Button
-					class="{disableSubmit ? '' : 'primary-color'}"
-					disabled="{disableSubmit}"
-					type="submit">Buat</Button>
-			</form>
-		</main>
-		<RequestLocationPermissionDialog
-			bind:this="{requestLocationPermissionDialog}" />
-	</MaterialAppMin>
-</div>
 
 <style lang="scss">
 	@import '../../components/common';
@@ -387,3 +304,99 @@
 		}
 	}
 </style>
+
+<svelte:head>
+	<title>{title}</title>
+	<meta name="" content="" />
+</svelte:head>
+
+<div transition:fade>
+	<MaterialAppMin>
+		<ProgressLinear bind:this="{loader}" />
+		<AppBar class="primary-color {isLoading ? 'top-4' : ''}">
+			<div slot="icon">
+				<Button
+					text
+					fab
+					size="small"
+					depressed
+					on:click="{() => history.back()}"
+				>
+					<Icon path="{mdiChevronLeft}" />
+				</Button>
+			</div>
+			<div slot="title">{title}</div>
+		</AppBar>
+		<main>
+			<form on:submit|preventDefault="{create}">
+				<Alert bind:this="{alert}" />
+				<label class="thumb-wrapper">
+					<input type="file" accept="image/*" capture on:input="{inputFile}" />
+					{#if imageUrl}
+						<img class="thumb" src="{imageUrl}" alt="" />
+					{:else}
+						<Icon size="{56}" path="{mdiImagePlus}" />
+					{/if}
+				</label>
+				<TextField autocomplete="text" outlined bind:value="{name}"
+					>Nama Toko</TextField
+				>
+				{#if browser}
+					<div class="map">
+						<div class="pin">
+							<Icon path="{mdiMapMarker}" size="{48}" class="primary-text" />
+						</div>
+						<Map
+							accessToken="{MAP_KEY}"
+							style="mapbox://styles/mapbox/streets-v11"
+							bind:this="{map}"
+							zoom="{CONST.zoom}"
+							center="{CONST.center}"
+							on:drag="{moving}"
+							on:recentre="{recenter}"
+						>
+							<NavigationControl />
+							<GeolocateControl on:geolocate="{geolocating}" />
+							<ScaleControl />
+						</Map>
+					</div>
+				{:else}
+					<div class="map loading"></div>
+				{/if}
+				<Menu offsetY bind:active="{menuActive}" closeOnClick>
+					<span slot="activator">
+						<Textarea
+							autogrow
+							rows="{3}"
+							outlined
+							autocomplete="address"
+							bind:value="{myAddress}"
+							clearable>Alamat</Textarea
+						>
+					</span>
+					<ListItemGroup bind:value="{myAddress}">
+						{#each addressList as item}
+							<ListItem
+								value="{item.value}"
+								active="{item.value == myAddress}"
+								on:click="{() => {
+									flyTo([item.center[0], item.center[1]]);
+								}}"
+							>
+								{item.name}
+							</ListItem>
+						{/each}
+					</ListItemGroup>
+				</Menu>
+				<Button
+					class="{disableSubmit ? '' : 'primary-color'}"
+					disabled="{disableSubmit}"
+					type="submit">Buat</Button
+				>
+			</form>
+		</main>
+		<RequestLocationPermissionDialog
+			bind:this="{requestLocationPermissionDialog}"
+		/>
+	</MaterialAppMin>
+</div>
