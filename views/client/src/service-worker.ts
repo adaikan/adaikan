@@ -20,10 +20,11 @@ service.register(async (instance, context) => {
 		event.waitUntil(process.promise);
 		if (event.data) {
 			const data = (await event.data.json()) as WebPushPayload;
-			if (data.tag == 'notify') {
+			if (data.tag == 'broadcast') {
 				context.addEventListener('notificationclick', async (event) => {
 					const process = instance.promiseify();
 					event.waitUntil(process.promise);
+					event.notification.close();
 					const clients: WindowClient[] =
 						(await context.clients.matchAll()) as any;
 					for (const client of clients) {
@@ -46,6 +47,7 @@ service.register(async (instance, context) => {
 				context.addEventListener('notificationclick', async (event) => {
 					const process = instance.promiseify();
 					event.waitUntil(process.promise);
+					event.notification.close();
 					const clients: WindowClient[] =
 						(await context.clients.matchAll()) as any;
 					for (const client of clients) {
