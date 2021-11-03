@@ -106,7 +106,7 @@
 	}
 	onMount(() => {
 		loading = false;
-		disableSubmit = true;
+		disableSubmit = false;
 		window.addEventListener('beforeunload', reload, { capture: true });
 	});
 </script>
