@@ -1,3 +1,8 @@
 # https://www.robotstxt.org/robotstxt.html
 User-agent: *
-Disallow:
+Allow: /
+Allow: /entry/*
+Allow: /detail/*
+Disallow: /*
+
+Sitemap: https://adaikan.id/sitemap.txt
