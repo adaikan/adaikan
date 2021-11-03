@@ -8,22 +8,15 @@
 		TextField,
 	} from 'svelte-materialify/src';
 	import { mdiChevronLeft, mdiMagnify, mdiStorefrontOutline } from '@mdi/js';
-	import { mdiClipboardTextClockOutline } from '$lib/icons';
 	import ProgressLinear from '$components/progress-linear.svelte';
 	import OrderCard from './_order-item.svelte';
 	import CartCard from '$components/cart-card.svelte';
 	import UserUnauthDialog from '$components/user-unauth-dialog.svelte';
 
 	import { onMount, onDestroy, getContext } from 'svelte';
-	import { writable } from 'svelte/store';
 	import { fade, slide } from 'svelte/transition';
-	import { browser, dev } from '$app/env';
-	import { goto } from '$app/navigation';
-	import { assets } from '$app/paths';
-	import { Currency } from '$lib/helper';
 
 	import type { BuyerClient } from '../__layout.svelte';
-	import { searching } from '$lib/map';
 
 	type Data = BuyerClient.Order & {
 		store: BuyerClient.Store;
@@ -33,7 +26,7 @@
 		delivery: BuyerClient.Delivery;
 	};
 
-	const title = 'Daftar Menunggu';
+	const title = 'Daftar Semua Pesanan';
 </script>
 
 <script lang="ts">
