@@ -1,8 +1,5 @@
 <script context="module" lang="ts">
-	import {
-		Icon,
-		Chip,
-	} from 'svelte-materialify/src';
+	import { Icon, Chip } from 'svelte-materialify/src';
 	import { mdiStorefrontOutline } from '@mdi/js';
 	import CartCard from '$components/cart-card.svelte';
 
@@ -42,122 +39,6 @@
 	}
 </script>
 
-<div transition:fade>
-	{#if order}
-		<a href="/order/{order.id}">
-			<div class="card subsection p-8">
-				<section class="bar" class:status>
-					{#if order.store.image}
-						{#if mode == 'embed'}
-							<img
-								class="thumb"
-								src="{order.store.image}"
-								alt="{order.store.name}" />
-						{:else}
-							{#await storeDownload(order.store.image)}
-								<div class="thumb loading"></div>
-							{:then src}
-								<img class="thumb" src="{src}" alt="{order.store.name}" />
-							{:catch error}
-								<div class="thumb e">
-									<Icon path="{mdiStorefrontOutline}" />
-								</div>
-							{/await}
-						{/if}
-					{:else}
-						<div class="thumb e">
-							<Icon path="{mdiStorefrontOutline}" />
-						</div>
-					{/if}
-					<div class="t-14 t-500 o-7">{order.store.name}</div>
-					{#if status}
-						<Chip label size="small">
-							{order.status}
-						</Chip>
-					{/if}
-				</section>
-				<hr class="hr" />
-				<section class="subsection">
-					{#each order.item as item}
-						<CartCard
-							control="{false}"
-							loading="{false}"
-							downloader="{productDownload}"
-							image="{item.product.image}"
-							amount="{item.amount}"
-							data="{{
-								name: item.product.name,
-								price: item.price,
-							}}" />
-					{/each}
-				</section>
-				<hr class="hr" />
-				<section class="subsection">
-					<div class="t-16 t-500 o-9">Rincian Pembayaran</div>
-					<hr class="hr" />
-					<section class="subsection">
-						<div class="column t-14 t-400">
-							<span class="o-7">Metode Pembayaran</span>
-							<span class="end">Bayar Tunai</span>
-						</div>
-						<div class="column t-14 t-400">
-							<span class="o-7">Total Harga ({order.item.length} pesanan)</span>
-							<span class="end">{toMoney(order.cost)}</span>
-						</div>
-						<div class="column t-14 t-400">
-							<span class="o-7"
-								>Biaya Kirim ({Math.round(order.delivery.range)}
-								{order.delivery.rangeUnit})</span>
-							<span class="end">{toMoney(order.delivery.cost)}</span>
-						</div>
-					</section>
-					<hr class="hr" />
-					<div class="column t-16 t-500">
-						<span class="">Total Bayar</span>
-						<span class="end"
-							>{toMoney(+order.delivery.cost + +order.cost)}</span>
-					</div>
-				</section>
-			</div>
-		</a>
-	{:else}
-		<div class="card subsection p-8">
-			<div class="bar">
-				<div class="thumb loading">&nbsp;</div>
-				<div class="loading">&nbsp;</div>
-			</div>
-			<hr class="hr" />
-			<CartCard />
-			<hr class="hr" />
-			<section class="section">
-				<span class="t-6 loading">&nbsp;</span>
-				<section class="subsection t-3">
-					<div class="loading">&nbsp;</div>
-					<div class="loading">&nbsp;</div>
-				</section>
-			</section>
-			<section class="section">
-				<div class="column t-14">
-					<span class="loading">&nbsp;</span>
-					<span class="loading">&nbsp;</span>
-				</div>
-			</section>
-			<section class="section">
-				<div class="column t-14">
-					<span class="loading">&nbsp;</span>
-					<span class="loading">&nbsp;</span>
-				</div>
-			</section>
-			<section class="section">
-				<div class="column t-16">
-					<span class="loading">&nbsp;</span>
-					<span class="loading">&nbsp;</span>
-				</div>
-			</section>
-		</div>
-	{/if}
-</div>
-
 <style lang="scss">
 	@import '../../components/common';
 	@import '../../components/skeleton';
@@ -190,7 +71,6 @@
 		}
 		@include large-only {
 			grid-template-columns: 1fr 15fr;
-
 		}
 		@include very-large-up {
 			grid-template-columns: 1fr 17fr;
@@ -203,7 +83,6 @@
 		}
 		@include large-only {
 			grid-template-columns: 1fr 15fr auto;
-
 		}
 		@include very-large-up {
 			grid-template-columns: 1fr 17fr auto;
@@ -299,3 +178,135 @@
 		}
 	}
 </style>
+
+<div transition:fade>
+	{#if order}
+		<a href="/order/{order.id}">
+			<div class="card subsection p-8">
+				<section class="bar" class:status>
+					{#if order.store.image}
+						{#if mode == 'embed'}
+							<img
+								class="thumb"
+								src="{order.store.image}"
+								alt="{order.store.name}"
+							/>
+						{:else}
+							{#await storeDownload(order.store.image)}
+								<div class="thumb loading"></div>
+							{:then src}
+								<img class="thumb" src="{src}" alt="{order.store.name}" />
+							{:catch error}
+								<div class="thumb e">
+									<Icon path="{mdiStorefrontOutline}" />
+								</div>
+							{/await}
+						{/if}
+					{:else}
+						<div class="thumb e">
+							<Icon path="{mdiStorefrontOutline}" />
+						</div>
+					{/if}
+					<div class="t-14 t-500 o-7">{order.store.name}</div>
+					{#if status}
+						<Chip label size="small">
+							{#if order.status == 'Queue'}
+								Menunggu
+							{:else if order.status == 'Process'}
+								Di Proses
+							{:else if order.status == 'Delivery'}
+								Di Kirim
+							{:else if order.status == 'Confirm'}
+								Konfirmasi
+							{:else if order.status == 'Done'}
+								Selesai
+							{:else if order.status == 'Reject'}
+								Di Tolak
+							{/if}
+						</Chip>
+					{/if}
+				</section>
+				<hr class="hr" />
+				<section class="subsection">
+					{#each order.item as item}
+						<CartCard
+							control="{false}"
+							loading="{false}"
+							downloader="{productDownload}"
+							image="{item.product.image}"
+							amount="{item.amount}"
+							data="{{
+								name: item.product.name,
+								price: item.price,
+							}}"
+						/>
+					{/each}
+				</section>
+				<hr class="hr" />
+				<section class="subsection">
+					<div class="t-16 t-500 o-9">Rincian Pembayaran</div>
+					<hr class="hr" />
+					<section class="subsection">
+						<div class="column t-14 t-400">
+							<span class="o-7">Metode Pembayaran</span>
+							<span class="end">Bayar Tunai</span>
+						</div>
+						<div class="column t-14 t-400">
+							<span class="o-7">Total Harga ({order.item.length} pesanan)</span>
+							<span class="end">{toMoney(order.cost)}</span>
+						</div>
+						<div class="column t-14 t-400">
+							<span class="o-7"
+								>Biaya Kirim ({Math.round(order.delivery.range)}
+								{order.delivery.rangeUnit})</span
+							>
+							<span class="end">{toMoney(order.delivery.cost)}</span>
+						</div>
+					</section>
+					<hr class="hr" />
+					<div class="column t-16 t-500">
+						<span class="">Total Bayar</span>
+						<span class="end"
+							>{toMoney(+order.delivery.cost + +order.cost)}</span
+						>
+					</div>
+				</section>
+			</div>
+		</a>
+	{:else}
+		<div class="card subsection p-8">
+			<div class="bar">
+				<div class="thumb loading">&nbsp;</div>
+				<div class="loading">&nbsp;</div>
+			</div>
+			<hr class="hr" />
+			<CartCard />
+			<hr class="hr" />
+			<section class="section">
+				<span class="t-6 loading">&nbsp;</span>
+				<section class="subsection t-3">
+					<div class="loading">&nbsp;</div>
+					<div class="loading">&nbsp;</div>
+				</section>
+			</section>
+			<section class="section">
+				<div class="column t-14">
+					<span class="loading">&nbsp;</span>
+					<span class="loading">&nbsp;</span>
+				</div>
+			</section>
+			<section class="section">
+				<div class="column t-14">
+					<span class="loading">&nbsp;</span>
+					<span class="loading">&nbsp;</span>
+				</div>
+			</section>
+			<section class="section">
+				<div class="column t-16">
+					<span class="loading">&nbsp;</span>
+					<span class="loading">&nbsp;</span>
+				</div>
+			</section>
+		</div>
+	{/if}
+</div>
