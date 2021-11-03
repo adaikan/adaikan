@@ -30,14 +30,13 @@
 	];
 	let value = '';
 	let messages: string[] = [];
-	let valid = true;
 	let loading = true;
 	async function submit() {
 		try {
 			loading = true;
 			await user.api.buyer.generate(value);
 			$session = { email: value };
-			goto('/entry/reset/step-2', {replaceState: true});
+			goto('/entry/reset/step-2', { replaceState: true });
 		} catch (error: any) {
 		} finally {
 			loading = false;
@@ -149,9 +148,7 @@
 							>
 						</Card>
 						<div class="btns">
-							<Button
-								class="primary-color black-text"
-								on:click="{() => valid && goto('/entry/reset/step-2')}"
+							<Button class="primary-color black-text" type="submit"
 								>berikutnya</Button
 							>
 						</div>
