@@ -104,7 +104,6 @@ const route: FastifyPluginAsync = async (server, opts) => {
 				to: data.email,
 				subject: 'Your OTP Code',
 				priority: 'high',
-				replyTo: `no-reply@` + request.headers.host,
 				html: otpTemplate(otp),
 			});
 		},
@@ -290,7 +289,7 @@ const route: FastifyPluginAsync = async (server, opts) => {
 						to: data.email,
 						subject: 'Your OTP Code',
 						priority: 'high',
-						replyTo: `no-reply@` + request.headers.host,
+	
 						html: otpTemplate(otp),
 					});
 					reply.ok(true);

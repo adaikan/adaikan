@@ -216,14 +216,12 @@ const route: FastifyPluginAsync = async (server, opts) => {
 			}
 			const data = await data_store.load();
 			if (request.body.open) {
-				const studio = spawn('npm run pm2:start:model', [], {
+				const child = spawn('npm run pm2:start:model', [], {
 					cwd: PROJECT_ROOT_DIR,
 					shell: true,
-					stdio: 'inherit',
-					detached: true,
 				});
 
-				studio.on('spawn', async () => {
+				child.on('spawn', async () => {
 					data.model.open = true;
 					data.model.link = MODEL_URL;
 					data.model.openBy = result.username;
@@ -238,8 +236,6 @@ const route: FastifyPluginAsync = async (server, opts) => {
 				const studio = spawn('npm run pm2:stop:model', [], {
 					cwd: PROJECT_ROOT_DIR,
 					shell: true,
-					stdio: 'inherit',
-					detached: true,
 				});
 
 				studio.on('spawn', async () => {
