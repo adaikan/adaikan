@@ -341,7 +341,8 @@ model Delivery {
   weightUnit String
   cost       Decimal     @db.Money
 
-  confirmed Boolean @default(false)
+  proofImage String?
+  confirmed  Boolean @default(false)
 
   sentOn    DateTime?
   receiveOn DateTime?
