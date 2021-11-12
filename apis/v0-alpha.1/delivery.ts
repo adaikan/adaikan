@@ -49,14 +49,18 @@ import sharp from 'sharp';
 import Api from 'utility/api';
 
 import { DeliveryModel } from 'models/delivery';
+import { FileStorage } from 'utility/storage';
 
 const route: FastifyPluginAsync = async (server, opts) => {
 	const {
-		env: { SERVER_PRIVATE_DIR },
+		env: { SERVER_PRIVATE_DIR, SERVER_PUBLIC_DIR, SERVER_STATIC_PATH },
 	} = process as Env<typeof EnvJson>;
 	const api = 'delivery';
 	const { jwt, orm, rbac, totp } = server;
 	const FILE_DIR = path.join(SERVER_PRIVATE_DIR, api);
+	const IMAGE_DIR = path.join(SERVER_PUBLIC_DIR, api, 'image');
+	const IMAGE_STATIC = path.join(SERVER_STATIC_PATH, api, 'image');
+	const image = new FileStorage({ root: IMAGE_DIR });
 	const model = new DeliveryModel(orm);
 
 	fs.mkdir(FILE_DIR, { recursive: true });
@@ -229,21 +233,16 @@ const route: FastifyPluginAsync = async (server, opts) => {
 		method: 'POST',
 		handler: async (request, reply) => {
 			const user = await request.identify();
-			const filename = path.basename(request.params['*']);
-			const dirname = path.dirname(request.params['*']);
-			const dir = path.join(FILE_DIR, dirname, 'image');
-			const image = path.join(dir, filename);
+			const dirname = FileStorage.path.dirname(request.params['*']);
+			const filename = FileStorage.path.basename(request.params['*']);
+			const src = FileStorage.path.join(IMAGE_STATIC, request.params['*']);
 
-			await fs.emptyDir(dir);
+			await image.saveImage(request.raw, { dirname, filename });
 
-			request.raw
-				.pipe(sharp())
-				.resize({ width: 150, height: 150, fit: 'cover', position: 'centre' })
-				.webp({ lossless: true })
-				.pipe(fs.createWriteStream(image))
-				.on('finish', () => {
-					reply.created(request.params);
-				});
+			reply.type('text/plain');
+			reply.code(201);
+			reply.send(src);
+
 			return reply;
 		},
 		schema: {},
@@ -255,13 +254,7 @@ const route: FastifyPluginAsync = async (server, opts) => {
 		url: `/${api}/image/*`,
 		method: 'GET',
 		handler: async (request, reply) => {
-			const user = await request.identify();
-			const basename = path.basename(request.params['*']);
-			const dirname = path.dirname(request.params['*']);
-
-			reply.sendFile(basename, path.join(FILE_DIR, dirname, 'image'));
-
-			return new Promise(() => {});
+			reply.notImplemented();
 		},
 		schema: {},
 	});
