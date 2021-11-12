@@ -116,7 +116,6 @@
 				slides.push({ src: URL.createObjectURL(file), href: '', id });
 			}
 			slides = slides;
-			console.log(slides);
 		}
 	}
 </script>

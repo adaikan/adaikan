@@ -14,6 +14,8 @@ import ProductApi from '$apis/product';
 import OrderApi from '$apis/order';
 import OrderedItemApi from '$apis/ordered-item';
 
+import DeliveryApi from '$apis/delivery';
+
 import ChatNode from '$apis/chat-node';
 import ChatMessageStack from '$apis/chat-channel';
 import ChatMessage from '$apis/chat-message';
@@ -105,6 +107,8 @@ export class ClientApi {
 	public order: OrderApi;
 	public orderedItem: OrderedItemApi;
 
+	public delivery: DeliveryApi;
+
 	public chatNode: ChatNode;
 	public chatChannel: ChatMessageStack;
 	public chatMessage: ChatMessage;
@@ -142,6 +146,8 @@ export class ClientApi {
 		this.order = new OrderApi(stdApi, token);
 		this.orderedItem = new OrderedItemApi(stdApi, token);
 
+		this.delivery = new DeliveryApi(stdApi, token);
+
 		this.chatNode = new ChatNode(stdApi, token);
 		this.chatChannel = new ChatMessageStack(stdApi, token);
 		this.chatMessage = new ChatMessage(stdApi, token);
@@ -163,6 +169,8 @@ export class ClientApi {
 		this.product.init();
 		this.order.init();
 		this.orderedItem.init();
+
+		this.delivery.init();
 
 		this.chatNode.init();
 		this.chatChannel.init();

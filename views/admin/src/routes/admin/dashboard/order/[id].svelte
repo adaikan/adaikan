@@ -42,6 +42,7 @@
 	let order: ClientApi.Admin.OrderDetail;
 	let couriers: ClientApi.Courier[] = [];
 	let business: ClientApi.Admin.Data['business'];
+	let delivery_proof: File | undefined;
 	let copy: any = {};
 	let contact: { name: string; nodeId: number }[] = [];
 	let disable = true;
@@ -151,6 +152,12 @@
 					if (changed.delivery.courier) {
 						changed.delivery.courier = undefined;
 					}
+					if (changed.delivery.proofImage && delivery_proof) {
+						temp.proofImage = await client.delivery.uploadImage(
+							`${order.deliveryId}/${delivery_proof.name}`,
+							delivery_proof
+						);
+					}
 					changed.delivery = {
 						update: temp
 					};
@@ -179,6 +186,13 @@
 		} catch (error: any) {
 			show_courier = false;
 		} finally {
+		}
+	}
+	function inputFile(this: HTMLInputElement) {
+		if (this.files) {
+			delivery_proof = this.files[0];
+			order.delivery.proofImage = URL.createObjectURL(delivery_proof);
+			order = order;
 		}
 	}
 </script>
@@ -444,6 +458,66 @@
 											<div class="flex-[50%] text-sm">Address</div>
 											<div class="flex-[50%] text-sm text-right">
 												{order.delivery.courier.address}
+											</div>
+										</div>
+										<div class="flex gap-4">
+											<div class="flex-[50%] flex justify-between text-sm">
+												<div>Proof</div>
+												<button
+													type="button"
+													on:click={() => {
+														order.delivery.proofImage = null;
+														order = order;
+													}}
+													class="btn btn-xs btn-square bg-base-100"
+												>
+													<svg
+														class="w-4 h-4"
+														fill="none"
+														stroke="currentColor"
+														viewBox="0 0 24 24"
+														xmlns="http://www.w3.org/2000/svg"
+														><path
+															stroke-linecap="round"
+															stroke-linejoin="round"
+															stroke-width="2"
+															d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+														/></svg
+													>
+												</button>
+											</div>
+											<div class="flex-[50%] text-sm flex justify-center">
+												{#if order.delivery.proofImage}
+													<img
+														src={order.delivery.proofImage}
+														alt="Proof Payment"
+														class="object-cover object-center"
+													/>
+												{:else}
+													<div class="relative bg-base-100 rounded-md hover:ring-2 hover:ring-primary hover:ring-offset-2 ring-offset-base-300">
+														<input
+															on:input={inputFile}
+															id="image"
+															type="file"
+															accept="image/*"
+															multiple
+															class="w-full h-full absolute opacity-0 z-10 cursor-pointer"
+														/>
+														<svg
+															class="w-8 h-8"
+															fill="none"
+															stroke="currentColor"
+															viewBox="0 0 24 24"
+															xmlns="http://www.w3.org/2000/svg"
+															><path
+																stroke-linecap="round"
+																stroke-linejoin="round"
+																stroke-width="2"
+																d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
+															/></svg
+														>
+													</div>
+												{/if}
 											</div>
 										</div>
 									</section>
