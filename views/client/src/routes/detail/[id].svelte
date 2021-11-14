@@ -331,7 +331,7 @@
 								<div class="column t-14 p-8">
 									<span>Berat</span>
 									<span class="end t-500"
-										>{product.weightUnit}. {product.weight}</span
+										>{product.weight} {product.weightUnit}.</span
 									>
 								</div>
 								<div class="column t-14 p-8">
