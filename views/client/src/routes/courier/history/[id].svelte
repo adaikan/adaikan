@@ -40,6 +40,7 @@
 		mdiRefresh,
 		mdiMessageTextOutline,
 		mdiChevronLeft,
+		mdiImageRemove,
 	} from '@mdi/js';
 	import { mdiClipboardTextClockOutline } from '$lib/icons';
 	import ProgressLinear from '$components/progress-linear.svelte';
@@ -161,7 +162,24 @@
 	fieldset {
 		border: none;
 		display: grid;
-		row-gap: 8px;
+	}
+	.thumb-wrapper {
+		padding: 16px;
+		min-height: 240px;
+		position: relative;
+		display: grid;
+		place-items: center;
+		.file {
+			position: absolute;
+			top: 0;
+			opacity: 0;
+		}
+		.thumb {
+			margin: auto;
+			width: 100%;
+			object-fit: cover;
+			object-position: center;
+		}
 	}
 	.btn {
 		width: stretch;
@@ -363,7 +381,7 @@
 							>
 						</section>
 					</fieldset>
-					<fieldset class="card p-16 white">
+					<fieldset class="card p-16 section white">
 						<div class="t-16 t-500 o-9">Daftar Pesanan</div>
 						<section class="section">
 							{#each delivery.order.item as item}
@@ -382,6 +400,28 @@
 							{/each}
 						</section>
 					</fieldset>
+					{#if delivery.status == 'Done'}
+						<fieldset class="card p-16 white">
+							<div class="t-16 t-500 o-9">Bukti Sampai</div>
+							<section class="section">
+								<section class="thumb-wrapper">
+									{#if delivery.proofImage}
+										<img
+											class="thumb"
+											src="{delivery.proofImage}"
+											alt="{user.name ?? ''}"
+											on:error="{() => {
+												delivery.proofImage = '';
+												delivery = delivery;
+											}}"
+										/>
+									{:else}
+										<Icon size="{56}" path="{mdiImageRemove}" />
+									{/if}
+								</section>
+							</section>
+						</fieldset>
+					{/if}
 					<fieldset class="card p-16 section white">
 						<div class="t-16 t-500 o-9">Rincian Pembayaran</div>
 						<hr class="hr" />
@@ -468,25 +508,25 @@
 		<Footer class="white elevation-5">
 			<div class="btn">
 				{#if delivery}
-				<Menu closeOnClick closeOnClickOutside openOnClick bottom>
-					<div slot="activator">
-						<Button class="" fab text size="small">
-							<Icon path="{mdiMessageTextOutline}" />
-						</Button>
-					</div>
-					<List>
-						{#each contact as item}
-							<ListItem
-								on:click="{() => {
-									goto('/courier/chat/' + item.node);
-								}}"
-							>
-								<div>{item.name}</div>
-								<div slot="subtitle">{item.telp}</div>
-							</ListItem>
-						{/each}
-					</List>
-				</Menu>
+					<Menu closeOnClick closeOnClickOutside openOnClick bottom>
+						<div slot="activator">
+							<Button class="" fab text size="small">
+								<Icon path="{mdiMessageTextOutline}" />
+							</Button>
+						</div>
+						<List>
+							{#each contact as item}
+								<ListItem
+									on:click="{() => {
+										goto('/courier/chat/' + item.node);
+									}}"
+								>
+									<div>{item.name}</div>
+									<div slot="subtitle">{item.telp}</div>
+								</ListItem>
+							{/each}
+						</List>
+					</Menu>
 				{:else}
 					<div class="loading">&nbsp;</div>
 					<div class="loading">&nbsp;</div>

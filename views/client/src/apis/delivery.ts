@@ -261,7 +261,7 @@ export default class DeliveryClientApi {
 				headers: { authorization: 'Bearer ' + (await this.getToken()) },
 				body: data,
 			})
-			.send<unknown>();
+			.send<string>();
 		return response.read();
 	}
 }

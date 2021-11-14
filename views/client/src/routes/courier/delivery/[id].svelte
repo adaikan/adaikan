@@ -12,7 +12,12 @@
 		Chip,
 		Footer,
 	} from 'svelte-materialify/src';
-	import { mdiMessageTextOutline, mdiChevronLeft } from '@mdi/js';
+	import {
+		mdiMessageTextOutline,
+		mdiChevronLeft,
+		mdiImagePlus,
+		mdiImageRemove,
+	} from '@mdi/js';
 	import ProgressLinear from '$components/progress-linear.svelte';
 	import RejectDialog from '../_reject.svelte';
 	import CartCard from '$components/cart-card.svelte';
@@ -52,6 +57,8 @@
 	let rejectDialog: RejectDialog;
 	let disableSubmit = false;
 	let contact: { name: string; telp: string; node: number }[] = [];
+	let imageUrl = '';
+	let image: File | undefined;
 
 	$: isLoading = loader?.active;
 	$: {
@@ -96,6 +103,7 @@
 					node: delivery.sender.chatNodeId,
 				},
 			];
+			imageUrl = delivery.proofImage || '';
 
 			rejectDialog.$on('decision', (event) => {
 				if (event.detail == 'yes') {
@@ -117,7 +125,7 @@
 			disableSubmit = true;
 			const id = delivery.id;
 			if (!user.contracted) {
-				throw new Error("Kurir tidak terkontrak");
+				throw new Error('Kurir tidak terkontrak');
 			}
 			if (delivery.status == 'Queue') {
 				await courierClient.delivery.update({
@@ -145,6 +153,15 @@
 				});
 				snackbar.setText('Silahkan menghubungi penerima');
 			} else if (delivery.status == 'Confirm') {
+				if (!delivery.proofImage && !image) {
+					throw new Error('Pengiriman belum ada bukti');
+				} else {
+					delivery.proofImage = await courierClient.delivery.uploadImage(
+						`${delivery.id}/${image.name}`,
+						image
+					);
+					console.log(delivery.proofImage);
+				}
 				if (!delivery.confirmed) {
 					throw new Error('Pengiriman belum terkonfirmasi');
 				}
@@ -153,10 +170,12 @@
 					data: {
 						status: 'Done',
 						receiveOn: new Date(),
+						proofImage: delivery.proofImage,
 					},
 				});
 				snackbar.setText('Pengiriman Berhasil');
 			}
+			snackbar.show();
 			await init();
 		} catch (error: any) {
 			snackbar.setText(error.message);
@@ -195,6 +214,18 @@
 	async function downloader(src: string) {
 		return URL.createObjectURL(await courierClient.product.downloadImage(src));
 	}
+	function inputFile(
+		event: Event & {
+			currentTarget: EventTarget & HTMLInputElement;
+		}
+	) {
+		const file = event.currentTarget.files?.[0];
+		if (file && user) {
+			image = file;
+			delivery.proofImage = file.name;
+			imageUrl = URL.createObjectURL(file);
+		}
+	}
 </script>
 
 <style lang="scss">
@@ -219,7 +250,24 @@
 	fieldset {
 		border: none;
 		display: grid;
-		row-gap: 8px;
+	}
+	.thumb-wrapper {
+		padding: 16px;
+		min-height: 240px;
+		position: relative;
+		display: grid;
+		place-items: center;
+		.file {
+			position: absolute;
+			top: 0;
+			opacity: 0;
+		}
+		.thumb {
+			margin: auto;
+			width: 100%;
+			object-fit: cover;
+			object-position: center;
+		}
 	}
 	.btn {
 		width: stretch;
@@ -421,7 +469,7 @@
 							>
 						</section>
 					</fieldset>
-					<fieldset class="card p-16 white">
+					<fieldset class="card p-16 section white">
 						<div class="t-16 t-500 o-9">Daftar Pesanan</div>
 						<section class="section">
 							{#each delivery.order.item as item}
@@ -440,6 +488,54 @@
 							{/each}
 						</section>
 					</fieldset>
+					{#if delivery.status == 'Confirm'}
+						<fieldset class="card p-16 white">
+							<div class="t-16 t-500 o-9">Bukti Sampai</div>
+							<section class="section">
+								<label class="thumb-wrapper">
+									<input
+										class="file"
+										type="file"
+										accept="image/*"
+										capture
+										on:input="{inputFile}"
+									/>
+									{#if imageUrl}
+										<img
+											class="thumb"
+											src="{imageUrl}"
+											alt="{user.name ?? ''}"
+											on:error="{() => (imageUrl = '')}"
+										/>
+									{:else}
+										<Icon size="{56}" path="{mdiImagePlus}" />
+									{/if}
+								</label>
+							</section>
+						</fieldset>
+					{/if}
+					{#if delivery.status == 'Done'}
+						<fieldset class="card p-16 white">
+							<div class="t-16 t-500 o-9">Bukti Sampai</div>
+							<section class="section">
+								<section class="thumb-wrapper">
+									{#if delivery.proofImage}
+										<img
+											class="thumb"
+											src="{delivery.proofImage}"
+											alt="{user.name ?? ''}"
+											on:error="{() => {
+												delivery.proofImage = '';
+												delivery = delivery;
+											}}"
+										/>
+									{:else}
+										<Icon size="{56}" path="{mdiImageRemove}" />
+									{/if}
+								</section>
+							</section>
+						</fieldset>
+					{/if}
 					<fieldset class="card p-16 section white">
 						<div class="t-16 t-500 o-9">Rincian Pembayaran</div>
 						<hr class="hr" />
@@ -485,7 +581,7 @@
 							<div class="textfield loading">&nbsp;</div>
 						</section>
 					</fieldset>
-					<fieldset class="card p-16 white">
+					<fieldset class="card p-16 white section">
 						<div class="t-16 loading">&nbsp;</div>
 						<section class="section">
 							{#each Array(2) as item}

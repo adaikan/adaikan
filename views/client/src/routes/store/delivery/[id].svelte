@@ -6,42 +6,17 @@
 		Icon,
 		Menu,
 		ListItem,
-		NavigationDrawer,
-		Avatar,
 		List,
-		ListItemGroup,
 		TextField,
 		Textarea,
-		Subheader,
-		Divider,
-		Overlay,
-		Card,
 		Chip,
 		Footer,
-		Badge,
-		CardActions,
-		CardSubtitle,
-		CardText,
-		CardTitle,
 	} from 'svelte-materialify/src';
 	import {
-		mdiMenu,
-		mdiViewDashboardOutline,
-		mdiDotsVertical,
-		mdiViewGridOutline,
-		mdiClipboardTextOutline,
-		mdiCached,
-		mdiCheck,
-		mdiTruckOutline,
-		mdiStorefrontOutline,
-		mdiCubeOutline,
-		mdiFishbowlOutline,
-		mdiAccountOutline,
-		mdiRefresh,
 		mdiMessageTextOutline,
 		mdiChevronLeft,
+		mdiImageRemove
 	} from '@mdi/js';
-	import { mdiClipboardTextClockOutline } from '$lib/icons';
 	import ProgressLinear from '$components/progress-linear.svelte';
 	import NoStore from '../_no-store-.svelte';
 	import RejectDialog from '../_reject.svelte';
@@ -51,10 +26,8 @@
 	import { onMount, onDestroy, getContext } from 'svelte';
 	import { fade, slide, scale } from 'svelte/transition';
 	import { writable, derived } from 'svelte/store';
-	import { dev } from '$app/env';
 	import { goto } from '$app/navigation';
 	import { Currency } from '$lib/helper';
-	import { CourierClientApi } from '$lib/courier';
 
 	import type { SellerClientApi } from '../__layout.svelte';
 
@@ -235,7 +208,24 @@
 	fieldset {
 		border: none;
 		display: grid;
-		row-gap: 8px;
+	}
+	.thumb-wrapper {
+		padding: 16px;
+		min-height: 240px;
+		position: relative;
+		display: grid;
+		place-items: center;
+		.file {
+			position: absolute;
+			top: 0;
+			opacity: 0;
+		}
+		.thumb {
+			margin: auto;
+			width: 100%;
+			object-fit: cover;
+			object-position: center;
+		}
 	}
 	.btn {
 		width: stretch;
@@ -473,7 +463,51 @@
 							>
 						</section>
 					</fieldset>
+					<fieldset class="card div p-16 white">
+						<div class="t-16 t-500 o-9">Kurir</div>
+						{#if order.delivery.courier}
+							<section class="section">
+								<TextField
+									value="{order.delivery.courier.name ?? ''}"
+									readonly
+									placeholder="-">Nama</TextField
+								>
+								<TextField
+									value="{order.delivery.courier.telp ?? ''}"
+									readonly
+									placeholder="-">Phone Number</TextField
+								>
+								<Textarea
+									value="{order.delivery.courier.address ?? ''}"
+									readonly
+									placeholder="-"
+									autogrow
+									rows="{3}">Lokasi</Textarea
+								>
+							</section>
+						{/if}
+					</fieldset>
 					<fieldset class="card p-16 white">
+						<div class="t-16 t-500 o-9">Bukti Sampai</div>
+						<section class="section">
+							<section class="thumb-wrapper">
+								{#if order.delivery.proofImage}
+									<img
+										class="thumb"
+										src="{order.delivery.proofImage}"
+										alt="{user.name ?? ''}"
+										on:error="{() => {
+											order.delivery.proofImage = '';
+											order = order;
+										}}"
+									/>
+								{:else}
+									<Icon size="{56}" path="{mdiImageRemove}" />
+								{/if}
+							</section>
+						</section>
+					</fieldset>
+					<fieldset class="card p-16 white section">
 						<div class="t-16 t-500 o-9">Daftar Pesanan</div>
 						<section class="section">
 							{#each order.item as item}
@@ -537,7 +571,7 @@
 							<div class="textfield loading">&nbsp;</div>
 						</section>
 					</fieldset>
-					<fieldset class="card p-16 white">
+					<fieldset class="card p-16 white section">
 						<div class="t-16 loading">&nbsp;</div>
 						<section class="section">
 							{#each Array(2) as item}
