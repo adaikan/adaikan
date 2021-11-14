@@ -1,11 +1,14 @@
 # https://www.robotstxt.org/robotstxt.html
+
 User-agent: *
-Allow: /
+
 Allow: /entry/*
 Allow: /detail/*
+
 Disallow: /account/*
 Disallow: /cart
 Disallow: /chat
+Disallow: /checkout
 Disallow: /order/*
 
 Sitemap: https://adaikan.id/sitemap.txt
