@@ -7,7 +7,7 @@ import { build, files, timestamp } from '$service-worker';
 import type { WebPushPayload } from '$server/global';
 import type { Message } from '$server/schemas/v0-alpha.1/chat';
 
-const dev = true;
+const dev = false;
 const service = new Service({
 	debug: dev,
 	cachename: timestamp + '',
