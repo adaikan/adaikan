@@ -136,6 +136,7 @@
 					{#each product as item}
 						<a href="/detail/{item.id}">
 							<Card
+								highlight='price'
 								data="{{
 									image: item.image,
 									name: item.name,

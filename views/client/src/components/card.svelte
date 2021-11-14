@@ -3,12 +3,7 @@
 	import { mdiImageRemove, mdiImageBrokenVariant } from '@mdi/js';
 
 	import { onMount, onDestroy } from 'svelte';
-	import { writable } from 'svelte/store';
 	import { fade } from 'svelte/transition';
-	import { browser, dev } from '$app/env';
-	import { goto } from '$app/navigation';
-	import { assets } from '$app/paths';
-	import { page } from '$app/stores';
 	import { Currency, toMoney } from '$lib/helper';
 
 	interface Data {
@@ -22,6 +17,7 @@
 
 <script lang="ts">
 	export let data: Data | undefined = undefined;
+	export let highlight: '' | 'price' | 'store' | 'stock' = '';
 	export let mode: 'fetch' | 'img' = 'img';
 	export let imageLoader = (url: string) => Promise.resolve('');
 
@@ -64,27 +60,36 @@
 			}
 		}
 		.content {
-			padding: 8px;
-			display: grid;
-			align-content: start;
-			row-gap: 4px;
+			display: flex;
+			flex-flow: column;
+			gap: 4px;
 			height: 114px;
 		}
 		.name {
+			padding: 8px 8px 0 8px;
 			font-weight: 700;
 		}
 		.price {
+			padding: 0 8px;
 			font-size: 14px;
 			font-weight: 600;
 		}
 		.store {
+			padding: 0 8px;
+			flex-grow: 1;
 			font-size: 14px;
 			font-weight: 400;
 			opacity: 0.7;
 		}
 		.stock {
+			padding: 0 8px;
 			font-size: 14px;
 			font-weight: 500;
+		}
+		.highlight {
+			padding: 4px;
+			background-color: var(--primary-color);
+			text-align: center;
 		}
 		.trunc {
 			display: -webkit-box;
@@ -102,7 +107,7 @@
 	}
 </style>
 
-<figure class="card" transition:fade use:Ripple={{}}>
+<figure class="card" transition:fade use:Ripple="{{}}">
 	{#if data}
 		{#if mode == 'img'}
 			{#if image}
@@ -141,13 +146,17 @@
 		<figcaption class="content">
 			<div class="name trunc-2">{data.name}</div>
 			{#if data.store}
-				<div class="store trunc-1">{data.store}</div>
+				<div class="store {highlight == 'store' ? 'highlight' : ''} trunc-1">
+					{data.store}
+				</div>
 			{/if}
-			<div class="price trunc-1">
+			<div class="price {highlight == 'price' ? 'highlight' : ''} trunc-1">
 				Rp. {Currency.toMoney(data.price)}
 			</div>
 			{#if data.stock}
-				<div class="stock trunc-1">{data.stock} stock</div>
+				<div class="stock {highlight == 'stock' ? 'highlight' : ''} trunc-1">
+					{data.stock} stock
+				</div>
 			{/if}
 		</figcaption>
 	{:else}
