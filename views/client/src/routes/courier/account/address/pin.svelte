@@ -122,6 +122,7 @@
 			}
 
 			if (user.address) {
+				const { position } = user;
 				address.set(user.address);
 				menuList.set([
 					{
@@ -135,7 +136,7 @@
 				]);
 				setTimeout(() => {
 					map.flyTo({
-						center: user.position as any,
+						center: position as any,
 						zoom: 16,
 					});
 				}, 1000);
@@ -189,9 +190,11 @@
 	async function submit() {
 		try {
 			loading();
-			const location = menuList.get().find((item) => item.value == user.address);
+			const location = menuList
+				.get()
+				.find((item) => item.value == user.address);
 			if (!location) {
-				throw new Error("Lokasi tidak terjangkau");
+				throw new Error('Lokasi tidak terjangkau');
 			}
 			await client.courier.update({
 				where: { id: user.id },
@@ -210,87 +213,6 @@
 		}
 	}
 </script>
-
-<svelte:head>
-	<title>Tandai</title>
-	<meta name="" content="" />
-</svelte:head>
-
-<div transition:slide>
-	<MaterialAppMin>
-		<ProgressLinear
-			bind:active="{$showProgress}"
-			bind:indeterminate="{$indeterminate}"
-			bind:value="{$progress}"
-			height="4px"
-			backgroundColor="secondary-color"
-			color="secondary-color" />
-		<AppBar class="primary-color {$showProgress ? 'top-4' : ''}">
-			<span slot="icon">
-				<Button fab icon text size="small" on:click="{() => history.back()}">
-					<Icon path="{mdiChevronLeft}" />
-				</Button>
-			</span>
-			<span slot="title">Tandai</span>
-			<span class="space"></span>
-			<Button text fab size="small" depressed on:click="{getPosition}">
-				<Icon path="{mdiCrosshairsGps}" />
-			</Button>
-			<Button text fab size="small" depressed on:click="{backSearch}">
-				<Icon path="{mdiMapSearchOutline}" />
-			</Button>
-		</AppBar>
-		<main class="main">
-			<form id="pin" on:submit|preventDefault="{submit}">
-				{#if user}
-					<div class="map">
-						<div class="pin">
-							<Icon path="{mdiMapMarker}" size="{48}" class="primary-text" />
-						</div>
-						<Map
-							accessToken="{MAP_KEY}"
-							style="mapbox://styles/mapbox/streets-v11"
-							bind:this="{map}"
-							zoom="{zoom}"
-							center="{center}"
-							on:drag="{moving}"
-							on:recentre="{recenter}">
-							<NavigationControl />
-							<GeolocateControl on:geolocate="{geolocating}" />
-							<ScaleControl />
-						</Map>
-					</div>
-					<div class="field">
-						<Textarea
-							value="{user.address ?? ''}"
-							autogrow
-							rows="{3}"
-							outlined
-							readonly>Alamat</Textarea>
-					</div>
-				{:else}
-					<div class="map loading">&nbsp;</div>
-					<div class="field">
-						<input type="text" class="loading" />
-					</div>
-				{/if}
-			</form>
-		</main>
-		<Footer class="white elevation-5">
-			<section class="btn">
-				<Button
-					class="{disableSubmit ? '' : 'primary-color'}"
-					form="pin"
-					type="submit"
-					disabled="{disableSubmit}">Perbarui</Button>
-			</section>
-		</Footer>
-		{#if user}
-			<RequestLocationPermissionDialog
-				bind:this="{requestLocationPermissionDialog}" />
-		{/if}
-	</MaterialAppMin>
-</div>
 
 <style lang="scss">
 	@import '../../../../components/common';
@@ -346,3 +268,89 @@
 		@include common-footer;
 	}
 </style>
+
+<svelte:head>
+	<title>Tandai</title>
+	<meta name="" content="" />
+</svelte:head>
+
+<div transition:slide>
+	<MaterialAppMin>
+		<ProgressLinear
+			bind:active="{$showProgress}"
+			bind:indeterminate="{$indeterminate}"
+			bind:value="{$progress}"
+			height="4px"
+			backgroundColor="secondary-color"
+			color="secondary-color"
+		/>
+		<AppBar class="primary-color {$showProgress ? 'top-4' : ''}">
+			<span slot="icon">
+				<Button fab icon text size="small" on:click="{() => history.back()}">
+					<Icon path="{mdiChevronLeft}" />
+				</Button>
+			</span>
+			<span slot="title">Tandai</span>
+			<span class="space"></span>
+			<Button text fab size="small" depressed on:click="{getPosition}">
+				<Icon path="{mdiCrosshairsGps}" />
+			</Button>
+			<Button text fab size="small" depressed on:click="{backSearch}">
+				<Icon path="{mdiMapSearchOutline}" />
+			</Button>
+		</AppBar>
+		<main class="main">
+			<form id="pin" on:submit|preventDefault="{submit}">
+				{#if user}
+					<div class="map">
+						<div class="pin">
+							<Icon path="{mdiMapMarker}" size="{48}" class="primary-text" />
+						</div>
+						<Map
+							accessToken="{MAP_KEY}"
+							style="mapbox://styles/mapbox/streets-v11"
+							bind:this="{map}"
+							zoom="{zoom}"
+							center="{center}"
+							on:drag="{moving}"
+							on:recentre="{recenter}"
+						>
+							<NavigationControl />
+							<GeolocateControl on:geolocate="{geolocating}" />
+							<ScaleControl />
+						</Map>
+					</div>
+					<div class="field">
+						<Textarea
+							value="{user.address ?? ''}"
+							autogrow
+							rows="{3}"
+							outlined
+							readonly>Alamat</Textarea
+						>
+					</div>
+				{:else}
+					<div class="map loading">&nbsp;</div>
+					<div class="field">
+						<input type="text" class="loading" />
+					</div>
+				{/if}
+			</form>
+		</main>
+		<Footer class="white elevation-5">
+			<section class="btn">
+				<Button
+					class="{disableSubmit ? '' : 'primary-color'}"
+					form="pin"
+					type="submit"
+					disabled="{disableSubmit}">Perbarui</Button
+				>
+			</section>
+		</Footer>
+		{#if user}
+			<RequestLocationPermissionDialog
+				bind:this="{requestLocationPermissionDialog}"
+			/>
+		{/if}
+	</MaterialAppMin>
+</div>
