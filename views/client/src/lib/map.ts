@@ -57,8 +57,8 @@ export { MAP_KEY };
 export const CONST = {
 	lat: -1.42,
 	lng: 119.44,
-	zoom: 2,
-	center: [119.44, -1.42],
+	zoom: 6,
+	center: [119.969777, -4.880139],
 };
 export const lat = new ObserverUnsafe(CONST.lat, { debug: false });
 export const lng = new ObserverUnsafe(CONST.lng, { debug: false });
@@ -73,7 +73,8 @@ export const centre = new ObserverUnsafe<[number, number]>([
 export const zoom = CONST.zoom;
 export const center = CONST.center;
 export const bbox: [number, number, number, number] = [
-	119.1, -5.2, 120.1, -5.1,
+	// 119.1, -5.2, 120.1, -5.1,
+	119.300573, -5.750302, 120.563784, -3.568224,
 ];
 
 const mbxClient = mbxSdk({ accessToken: MAP_KEY });
