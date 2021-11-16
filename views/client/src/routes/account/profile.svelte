@@ -198,13 +198,6 @@
 						placeholder="-"
 						rules="{rules.telp}"
 						outlined>Nomor Handphone</TextField>
-					<TextField
-						class="textfield"
-						value="{address?.place ?? ''}"
-						placeholder="-"
-						outlined
-						autocomplete="address-level1 address-level2 address-level3 address-level4"
-						readonly>Alamat</TextField>
 				</form>
 			{:else}
 				<section class="data">
