@@ -9,7 +9,6 @@
 		NavigationDrawer,
 		List,
 		Divider,
-		Overlay,
 		ListItem,
 		Avatar,
 		Badge,
@@ -25,6 +24,8 @@
 	import ProgressLinear from '$components/progress-linear.svelte';
 	import UserUnauthDialog from '$components/user-unauth-dialog.svelte';
 	import InitDialog from './_init-dialog.svelte';
+
+	import * as Map from '$lib/map';
 
 	import { getContext, onMount, onDestroy } from 'svelte';
 	import { slide, fade } from 'svelte/transition';
@@ -86,6 +87,30 @@
 			user = await client.courier.auth();
 			if (!user.position.length) {
 				showInitDialog = true;
+			} else {
+				const {coords: {longitude, latitude}} = await Map.getLocation();
+				if (
+					user.position[0] != longitude &&
+					user.position[1] != latitude
+				) {
+					await Map.track([
+						longitude,
+						latitude,
+					]);
+					const selected = Map.getSelected();
+					if (selected) {
+						await client.courier.update({
+							where: { id: user.id },
+							data: {
+								area: selected.area,
+								local: selected.local,
+								place: selected.place,
+								address: Map.address.get(),
+								position: [longitude, latitude],
+							},
+						});
+					}
+				}
 			}
 			delivery = await client.delivery.search({
 				where: {
@@ -103,8 +128,16 @@
 				nodeId: user.chatNodeId,
 			});
 		} catch (error: any) {
-			showUserUnauthDialog = true;
-			service.unregister();
+			console.error(error);
+			switch (error.type) {
+				case client.courier.api.Error.FailedAuthentication.type:
+					showUserUnauthDialog = true;
+					service.unregister();
+					break;
+
+				default:
+					break;
+			}
 		} finally {
 			loader.loaded();
 		}
@@ -154,7 +187,7 @@
 	* :global {
 		@include common-app;
 		@include common-loader;
-		@include common-appbar ($pad: false) {
+		@include common-appbar($pad: false) {
 			z-index: 2;
 		}
 		@include common-drawer;
