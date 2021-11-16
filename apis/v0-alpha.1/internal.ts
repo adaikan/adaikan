@@ -75,15 +75,6 @@ const route: FastifyPluginAsync = async (server, opts) => {
 
 	await image.init();
 
-	const channel = server.wss.createChannel(api);
-
-	server.wss.route({
-		path: `/${api}`,
-		handler: (ws, store) => {
-			ws.close();
-		},
-	});
-
 	server.route<{
 		Body: RegisterData;
 	}>({
@@ -235,6 +226,8 @@ const route: FastifyPluginAsync = async (server, opts) => {
 			if (data) {
 				if (data.role == role) {
 					reply.ok<Data>(data);
+
+					reply.log.info(user);
 				} else {
 					throw Api.Error.FailedAuthentication('Invalid Role');
 				}
