@@ -6,6 +6,3 @@
 */
 -- AlterTable
 ALTER TABLE "Delivery" ADD COLUMN     "proofImage" TEXT;
-
--- AlterTable
-ALTER TABLE "Order" DROP COLUMN "proofImage";
