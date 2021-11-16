@@ -106,6 +106,9 @@
 		width: 100%;
 		display: grid;
 		gap: 16px;
+		@include medium-up {
+			width: 420px;
+		}
 	}
 	a {
 		color: inherit;
