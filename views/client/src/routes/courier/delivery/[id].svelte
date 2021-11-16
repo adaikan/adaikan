@@ -17,6 +17,7 @@
 		mdiChevronLeft,
 		mdiImagePlus,
 		mdiImageRemove,
+		mdiMapMarkerPath,
 	} from '@mdi/js';
 	import ProgressLinear from '$components/progress-linear.svelte';
 	import RejectDialog from '../_reject.svelte';
@@ -427,6 +428,21 @@
 								<span class="o-7">Tanggal Terima</span>
 								<span class="end">{delivery.receiveOn ?? '-'}</span>
 							</div>
+							<!-- <div class="column t-14 t-400">
+								<span class="o-7">
+									<a
+										target="_blank"
+										rel="external"
+										href="https://www.google.co.id/maps/dir/{user
+											.position[1]},{user.position[0]}/{delivery.sender
+											.position[1]},{delivery.sender
+											.position[0]}"
+									>
+										Rute
+									</a>
+								</span>
+								<span class="end"> </span>
+							</div> -->
 						</section>
 					</fieldset>
 					<fieldset class="card div p-16 white">
@@ -443,8 +459,28 @@
 								readonly
 								placeholder="-"
 								autogrow
-								rows="{3}">Alamat Toko</Textarea
+								rows="{3}"
 							>
+								<div>Alamat Toko</div>
+								<div slot="append">
+									<Button
+										fab
+										icon
+										text
+										size="small"
+										on:click="{() => {
+											window.open(
+												`https://www.google.co.id/maps/dir/${user.position[1]},${user.position[0]}/${delivery.recipient.position[1]},${delivery.recipient.position[0]}`
+											);
+										}}"
+									>
+										<Icon
+											class="grey-text text-darken-3"
+											path="{mdiMapMarkerPath}"
+										/>
+									</Button>
+								</div>
+							</Textarea>
 						</section>
 					</fieldset>
 					<fieldset class="card div p-16 white">
@@ -465,8 +501,28 @@
 								readonly
 								placeholder="-"
 								autogrow
-								rows="{3}">Alamat</Textarea
+								rows="{3}"
 							>
+								<div>Alamat</div>
+								<div slot="append">
+									<Button
+										fab
+										icon
+										text
+										size="small"
+										on:click="{() => {
+											window.open(
+												`https://www.google.co.id/maps/dir/${user.position[1]},${user.position[0]}/${delivery.sender.position[1]},${delivery.sender.position[0]}`
+											);
+										}}"
+									>
+										<Icon
+											class="grey-text text-darken-3"
+											path="{mdiMapMarkerPath}"
+										/>
+									</Button>
+								</div>
+							</Textarea>
 						</section>
 					</fieldset>
 					<fieldset class="card p-16 section white">
