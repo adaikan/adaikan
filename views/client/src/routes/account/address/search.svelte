@@ -6,58 +6,31 @@
 		Footer,
 		Button,
 		Icon,
-		Menu,
-		NavigationDrawer,
-		Avatar,
 		List,
-		ListGroup,
 		ListItem,
 		ListItemGroup,
-		Card,
-		Chip,
 		TextField,
-		Textarea,
-		Checkbox,
 	} from 'svelte-materialify/src';
 	import {
 		address,
-		menuList,
 		searching,
+		menuList,
+		getSelected,
 		typing,
 	} from '$lib/map';
 	import {
-		mdiAccountOutline,
-		mdiClipboardListOutline,
-		mdiBellOutline,
-		mdiTagOutline,
-		mdiLogout,
-		mdiAccountCircle,
-		mdiMapMarkerRadiusOutline,
-		mdiCheck,
-		mdiEyeOff,
-		mdiEye,
-		mdiDeleteOutline,
 		mdiChevronLeft,
-		mdiChevronRight,
-		mdiMapMarkerAlertOutline,
 		mdiMagnify,
 		mdiClose,
-		mdiMapMarker,
-		mdiCrosshairsGps,
 		mdiMapOutline,
 	} from '@mdi/js';
 
 	import { onMount, onDestroy, getContext } from 'svelte';
 	import { derived, writable } from 'svelte/store';
 	import { fade, slide } from 'svelte/transition';
-	import { browser, dev } from '$app/env';
 	import { goto } from '$app/navigation';
-	import { assets } from '$app/paths';
-	import { page } from '$app/stores';
 
-	import type { Item, MapComponent } from '$lib/map';
 	import type { BuyerClient } from '../../__layout.svelte';
-	import type { ObserverUnsafe } from '$lib/helper';
 
 	let showProgress = writable(true);
 	let progress = writable(0);
@@ -67,14 +40,11 @@
 <script lang="ts">
 	const buyer = getContext<BuyerClient>('buyer');
 	let user = buyer.get();
-	let myAddress = '';
-	let isSearching = false;
-	let addressList: Item[] = [];
 	let disableSubmit = true;
 
 	$: {
-		if (myAddress) {
-			typing(myAddress);
+		if ($address) {
+			typing($address);
 		} else {
 			disableSubmit = true;
 		}
@@ -84,9 +54,6 @@
 	onDestroy(release);
 	async function init() {
 		try {
-			address.subscribe(updateMyAddress);
-			menuList.subscribe(updateMenu);
-			searching.subscribe(updateSearching);
 			if (!user) {
 				await buyer.ready;
 				user = await buyer.auth();
@@ -97,11 +64,7 @@
 			loaded();
 		}
 	}
-	async function release() {
-		address.unsubscribe(updateMyAddress);
-		menuList.unsubscribe(updateMenu);
-		searching.unsubscribe(updateSearching);
-	}
+	async function release() {}
 	function loading() {
 		$showProgress = true;
 	}
@@ -111,23 +74,20 @@
 	function select() {
 		disableSubmit = false;
 	}
-	function updateMyAddress(value: string) {
-		myAddress = value;
-	}
-	function updateSearching(value: boolean) {
-		isSearching = value;
-	}
-	function updateMenu(value: Item[]) {
-		addressList = value;
-	}
 	function submit() {
 		try {
 			loading();
-			const location = menuList.get().find((item) => item.value == myAddress);
+			const location = getSelected()
 			if (location) {
 				goto('/account/address/pin', { state: location });
+			} else {
+				throw new Error('location not found');
 			}
-		} catch (error: any) {}
+		} catch (error: any) {
+			console.error(error);
+		} finally {
+			loaded();
+		}
 	}
 	function openMap() {
 		loading();
@@ -164,20 +124,20 @@
 		<main>
 			<form id="search" on:submit|preventDefault="{submit}">
 				{#if user}
-					<TextField bind:value="{myAddress}" outlined>
+					<TextField bind:value="{$address}" outlined>
 						<div slot="prepend">
 							<Icon path="{mdiMagnify}" />
 						</div>
 						<div>Alamat</div>
 						<div slot="append">
-							{#if myAddress}
+							{#if address}
 								<Button
 									fab
 									icon
 									text
 									size="small"
 									on:click="{() => {
-										myAddress = '';
+										$address = '';
 									}}">
 									<Icon path="{mdiClose}" />
 								</Button>
@@ -185,18 +145,18 @@
 						</div>
 					</TextField>
 					<List>
-						<ListItemGroup bind:value="{myAddress}">
-							{#if isSearching}
+						<ListItemGroup bind:value="{$address}">
+							{#if $searching}
 								<div class="list">
 									{#each Array(4) as value}
 										<input type="text" readonly class="loading" />
 									{/each}
 								</div>
 							{:else}
-								{#each addressList as item}
+								{#each $menuList as item}
 									<ListItem
 										value="{item.value}"
-										active="{item.value == myAddress}"
+										active="{item.value == $address}"
 										multiline
 										on:click="{select}">
 										{item.name}

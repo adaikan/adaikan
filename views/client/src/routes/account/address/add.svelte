@@ -6,76 +6,22 @@
 		Footer,
 		Button,
 		Icon,
-		Menu,
-		NavigationDrawer,
-		Avatar,
-		List,
-		ListGroup,
-		ListItem,
-		ListItemGroup,
-		Card,
-		Chip,
 		TextField,
 		Textarea,
-		Checkbox,
 	} from 'svelte-materialify/src';
-	import {
-		Map,
-		GeolocateControl,
-		NavigationControl,
-		ScaleControl,
-		Marker,
-		askLocationPermission,
-		getLocation,
-		RequestLocationPermissionDialog,
-		MAP_KEY,
-		center,
-		zoom,
-		address,
-		lat,
-		lng,
-		menuList,
-		searching,
-		typing,
-		geolocating,
-		moving,
-		recenter,
-		search,
-		tracking,
-	} from '$lib/map';
 	import Snackbar from '$components/snackbar.svelte';
 	import {
-		mdiAccountOutline,
-		mdiClipboardListOutline,
-		mdiBellOutline,
-		mdiTagOutline,
-		mdiLogout,
-		mdiAccountCircle,
-		mdiMapMarkerRadiusOutline,
-		mdiCheck,
-		mdiEyeOff,
-		mdiEye,
-		mdiDeleteOutline,
 		mdiChevronLeft,
-		mdiChevronRight,
-		mdiMapMarkerAlertOutline,
-		mdiMagnify,
-		mdiClose,
-		mdiMapMarker,
 	} from '@mdi/js';
 
 	import { onMount, onDestroy, getContext } from 'svelte';
 	import { writable } from 'svelte/store';
 	import { fade, slide } from 'svelte/transition';
-	import { browser, dev } from '$app/env';
 	import { goto } from '$app/navigation';
-	import { assets } from '$app/paths';
-	import { page } from '$app/stores';
 	import * as rules from '$lib/rules';
 
 	import type { Item, MapComponent } from '$lib/map';
 	import type { BuyerClient } from '../../__layout.svelte';
-	import type { ObserverUnsafe } from '$lib/helper';
 
 	let showProgress = writable(true);
 	let progress = writable(0);
@@ -147,7 +93,7 @@
 				snackbar.setText('Berhasil');
 				setTimeout(() => {
 					goto('/account/address', { replaceState: true, state: null });
-				}, 1000);
+				}, 1500);
 			} else {
 				throw new Error('Posisi tidak ditemukan');
 			}

@@ -3,7 +3,6 @@ import { Map, Geocoder, Marker, controls } from '@beyonk/svelte-mapbox';
 import RequestLocationPermissionDialog from '$components/ask-location-dialog.svelte';
 // @ts-ignore
 import mbxSdk from '@mapbox/mapbox-sdk';
-import mbxOptimizationSdk from '@mapbox/mapbox-sdk/services/optimization';
 import mbxGeocodingSdk from '@mapbox/mapbox-sdk/services/geocoding';
 import mbxDirectionsSdk from '@mapbox/mapbox-sdk/services/directions';
 
@@ -73,13 +72,11 @@ export const centre = new ObserverUnsafe<[number, number]>([
 export const zoom = CONST.zoom;
 export const center = CONST.center;
 export const bbox: [number, number, number, number] = [
-	// 119.1, -5.2, 120.1, -5.1,
 	119.300573, -5.750302, 120.563784, -3.568224,
 ];
 
 const mbxClient = mbxSdk({ accessToken: MAP_KEY });
 const mbxGeocoding = mbxGeocodingSdk(mbxClient);
-const mbxOptimization = mbxOptimizationSdk(mbxClient);
 export const mbxDirections = mbxDirectionsSdk(mbxClient);
 
 export {
