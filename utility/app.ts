@@ -51,19 +51,19 @@ export default class App {
 									request.raw.socket.remoteAddress ?? '0.0.0.0'
 								}:${request.raw.socket.remotePort ?? 0}`;
 								return {
-									method: request.method,
-									url: request.url,
-									hostname: request.hostname,
+									method: request?.method,
+									url: request?.url,
+									hostname: request?.hostname,
 									remote,
-									forwarded: request.headers.forwarded,
+									forwarded: request?.headers?.forwarded,
 								};
 							},
 							res(response) {
 								const { request } = response;
 								return {
-									method: request.method,
-									statusCode: response.statusCode,
-									url: request.url,
+									method: request?.method,
+									statusCode: response?.statusCode,
+									url: request?.url,
 								};
 							},
 						},
