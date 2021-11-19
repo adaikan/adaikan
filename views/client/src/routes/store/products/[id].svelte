@@ -7,14 +7,22 @@
 		TextField,
 		Textarea,
 		Select,
+		List,
+		ListItem,
+		Dialog,
 	} from 'svelte-materialify/src';
-	import { mdiChevronLeft, mdiImagePlus } from '@mdi/js';
+	import {
+		mdiChevronLeft,
+		mdiImagePlus,
+		mdiCameraOutline,
+		mdiImageOutline,
+	} from '@mdi/js';
 	import ProgressLinear from '$components/progress-linear.svelte';
 	import Snackbar from '$components/snackbar.svelte';
 
 	import { onMount, onDestroy, getContext } from 'svelte';
 	import { fade } from 'svelte/transition';
-	import { Diff, Currency } from '$lib/helper';
+	import { Diff, Currency, element_support } from '$lib/helper';
 
 	import type { SellerClientApi } from '../__layout.svelte';
 
@@ -41,6 +49,9 @@
 	let imageUrl = '';
 	let price = '';
 	let disableSubmit = true;
+
+	let show_pick_image = false;
+	let support_image_capture = false;
 
 	$: {
 		if (navigating && $navigating) {
@@ -79,6 +90,7 @@
 			convert(product);
 			copy = Diff.objectCopy(product);
 			imageUrl = store.image;
+			support_image_capture = element_support('input', 'capture');
 		} catch (error: any) {
 			snackbar.setText(error.message);
 			snackbar.show();
@@ -175,13 +187,14 @@
 		event.preventDefault();
 		product.price = Currency.toMoney(product.price as any) as any;
 	}
-	function onFile(
+	function inputFile(
 		event: Event & {
 			currentTarget: EventTarget & HTMLInputElement;
 		}
 	) {
 		file = event.currentTarget.files?.[0];
 		if (file) {
+			show_pick_image = false;
 			product.image = imageUrl = URL.createObjectURL(file);
 		}
 	}
@@ -217,11 +230,21 @@
 		display: grid;
 		place-items: center;
 		height: 250px;
-		input {
+		button {
 			position: absolute;
 			top: 0;
+			width: 100%;
+			height: 100%;
 			opacity: 0;
+			z-index: 1;
 		}
+	}
+	.input-file {
+		position: absolute;
+		top: 0;
+		width: 100%;
+		height: 100%;
+		opacity: 0;
 	}
 	.thumb {
 		margin: auto;
@@ -254,7 +277,6 @@
 		@include common-app;
 		@include common-appbar;
 		@include common-loader;
-		// @include common-footer;
 		.textfield {
 			&.loading {
 				height: 38px;
@@ -303,14 +325,17 @@
 			<form on:submit|preventDefault="{update}">
 				{#if product}
 					<fieldset>
-						<label class="thumb-wrapper">
-							<input type="file" accept="image/*" capture on:input="{onFile}" />
+						<div class="thumb-wrapper">
 							{#if imageUrl}
-								<img class="thumb" src="{imageUrl}" alt="{product.name}" />
+								<img class="thumb" src="{imageUrl}" alt="" />
 							{:else}
 								<Icon size="{56}" path="{mdiImagePlus}" />
 							{/if}
-						</label>
+							<button
+								type="button"
+								on:click="{() => (show_pick_image = !show_pick_image)}"
+							></button>
+						</div>
 					</fieldset>
 					<fieldset>
 						<TextField class="textfield" bind:value="{product.name}" required>
@@ -399,5 +424,36 @@
 			</form>
 		</main>
 		<Snackbar bind:this="{snackbar}" />
+		<Dialog bind:active="{show_pick_image}">
+			<List>
+				<ListItem>
+					<div>Pilih Gambar</div>
+					<div slot="prepend">
+						<Icon path="{mdiImageOutline}" />
+					</div>
+					<input
+						class="input-file"
+						type="file"
+						accept="image/*"
+						on:input="{inputFile}"
+					/>
+				</ListItem>
+				{#if support_image_capture}
+					<ListItem>
+						<div>Ambil Foto</div>
+						<div slot="prepend">
+							<Icon path="{mdiCameraOutline}" />
+						</div>
+						<input
+							class="input-file"
+							type="file"
+							accept="image/*"
+							capture
+							on:input="{inputFile}"
+						/>
+					</ListItem>
+				{/if}
+			</List>
+		</Dialog>
 	</MaterialAppMin>
 </div>

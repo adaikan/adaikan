@@ -6,22 +6,11 @@
 		Icon,
 		TextField,
 		Textarea,
-		Select,
-		Radio,
-		Footer,
 		Menu,
 		ListItem,
-		NavigationDrawer,
-		Avatar,
 		List,
 		ListItemGroup,
-		Divider,
-		Overlay,
-		Badge,
-		CardActions,
-		CardSubtitle,
-		CardText,
-		CardTitle,
+		Dialog,
 	} from 'svelte-materialify/src';
 	import ProgressLinear from '$components/progress-linear.svelte';
 	import Alert from '$components/alert.svelte';
@@ -50,33 +39,19 @@
 		centre,
 	} from '$lib/map';
 	import {
-		mdiMenu,
-		mdiViewDashboardOutline,
-		mdiDotsVertical,
-		mdiViewGridOutline,
-		mdiClipboardTextOutline,
-		mdiCached,
-		mdiCheck,
-		mdiTruckOutline,
-		mdiStorefrontOutline,
-		mdiCubeOutline,
-		mdiFishbowlOutline,
-		mdiAccountOutline,
-		mdiRefresh,
-		mdiPlus,
 		mdiChevronLeft,
 		mdiImagePlus,
 		mdiMapMarker,
+		mdiCameraOutline,
+		mdiImageOutline,
 	} from '@mdi/js';
-	import { mdiClipboardTextClockOutline } from '$lib/icons';
 
 	import { onMount, onDestroy, getContext } from 'svelte';
 	import { fade, slide, scale } from 'svelte/transition';
-	import { writable, derived } from 'svelte/store';
 	import { dev, browser } from '$app/env';
 	import { goto } from '$app/navigation';
-	import { wait } from '$lib/helper';
 	import { MAP_KEY } from '$lib/env';
+	import { element_support } from '$lib/helper';
 
 	import type { Item } from '$lib/map';
 	import type { SellerClientApi } from './__layout.svelte';
@@ -95,6 +70,8 @@
 	let position: GeolocationPosition | undefined;
 	let file: File | undefined;
 
+	let show_pick_image = false;
+	let support_image_capture = false;
 	let imageUrl = '';
 	let name = '';
 	let telp = '';
@@ -150,6 +127,8 @@
 				position = await getLocation();
 				flyTo([position.coords.longitude, position.coords.latitude]);
 			}
+			
+			support_image_capture = element_support('input', 'capture');
 		} catch (error: any) {
 		} finally {
 			loader.loaded();
@@ -233,6 +212,7 @@
 	) {
 		file = event.currentTarget.files?.[0];
 		if (file) {
+			show_pick_image = false;
 			imageUrl = URL.createObjectURL(file);
 		}
 	}
@@ -258,11 +238,21 @@
 		display: grid;
 		place-items: center;
 		height: 250px;
-		input {
+		button {
 			position: absolute;
 			top: 0;
+			width: 100%;
+			height: 100%;
 			opacity: 0;
+			z-index: 1;
 		}
+	}
+	.input-file {
+		position: absolute;
+		top: 0;
+		width: 100%;
+		height: 100%;
+		opacity: 0;
 	}
 	.thumb {
 		margin: auto;
@@ -330,14 +320,15 @@
 		<main>
 			<form on:submit|preventDefault="{create}">
 				<Alert bind:this="{alert}" />
-				<label class="thumb-wrapper">
-					<input type="file" accept="image/*" capture on:input="{inputFile}" />
+				<div class="thumb-wrapper">
 					{#if imageUrl}
 						<img class="thumb" src="{imageUrl}" alt="" />
 					{:else}
 						<Icon size="{56}" path="{mdiImagePlus}" />
 					{/if}
-				</label>
+					<button type="button" on:click="{() => (show_pick_image = !show_pick_image)}"
+					></button>
+				</div>
 				<TextField autocomplete="text" outlined bind:value="{name}"
 					>Nama Toko</TextField
 				>
@@ -398,5 +389,36 @@
 		<RequestLocationPermissionDialog
 			bind:this="{requestLocationPermissionDialog}"
 		/>
+		<Dialog bind:active="{show_pick_image}">
+			<List>
+				<ListItem>
+					<div>Pilih Gambar</div>
+					<div slot="prepend">
+						<Icon path="{mdiImageOutline}" />
+					</div>
+					<input
+						class="input-file"
+						type="file"
+						accept="image/*"
+						on:input="{inputFile}"
+					/>
+				</ListItem>
+				{#if support_image_capture}
+					<ListItem>
+						<div>Ambil Foto</div>
+						<div slot="prepend">
+							<Icon path="{mdiCameraOutline}" />
+						</div>
+						<input
+							class="input-file"
+							type="file"
+							accept="image/*"
+							capture
+							on:input="{inputFile}"
+						/>
+					</ListItem>
+				{/if}
+			</List>
+		</Dialog>
 	</MaterialAppMin>
 </div>

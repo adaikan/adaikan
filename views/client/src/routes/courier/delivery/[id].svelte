@@ -11,6 +11,7 @@
 		Textarea,
 		Chip,
 		Footer,
+		Dialog,
 	} from 'svelte-materialify/src';
 	import {
 		mdiMessageTextOutline,
@@ -18,6 +19,8 @@
 		mdiImagePlus,
 		mdiImageRemove,
 		mdiMapMarkerPath,
+		mdiCameraOutline,
+		mdiImageOutline,
 	} from '@mdi/js';
 	import ProgressLinear from '$components/progress-linear.svelte';
 	import RejectDialog from '../_reject.svelte';
@@ -30,7 +33,7 @@
 	import { goto } from '$app/navigation';
 	import { page, navigating } from '$app/stores';
 
-	import { Currency } from '$lib/helper';
+	import { Currency, element_support } from '$lib/helper';
 
 	import type { CourierClientApi } from '../__layout.svelte';
 
@@ -60,6 +63,8 @@
 	let contact: { name: string; telp: string; node: number }[] = [];
 	let imageUrl = '';
 	let image: File | undefined;
+	let show_pick_image = false;
+	let support_image_capture = false;
 
 	$: isLoading = loader?.active;
 	$: {
@@ -111,6 +116,8 @@
 					reject();
 				}
 			});
+
+			support_image_capture = element_support('input', 'capture');
 		} catch (error: any) {
 		} finally {
 			loader.loaded();
@@ -222,6 +229,7 @@
 	) {
 		const file = event.currentTarget.files?.[0];
 		if (file && user) {
+			show_pick_image = false;
 			image = file;
 			delivery.proofImage = file.name;
 			imageUrl = URL.createObjectURL(file);
@@ -263,12 +271,27 @@
 			top: 0;
 			opacity: 0;
 		}
-		.thumb {
-			margin: auto;
+		button {
+			position: absolute;
+			top: 0;
 			width: 100%;
-			object-fit: cover;
-			object-position: center;
+			height: 100%;
+			opacity: 0;
+			z-index: 1;
 		}
+	}
+	.input-file {
+		position: absolute;
+		top: 0;
+		width: 100%;
+		height: 100%;
+		opacity: 0;
+	}
+	.thumb {
+		margin: auto;
+		width: 100%;
+		object-fit: cover;
+		object-position: center;
 	}
 	.btn {
 		width: stretch;
@@ -428,21 +451,6 @@
 								<span class="o-7">Tanggal Terima</span>
 								<span class="end">{delivery.receiveOn ?? '-'}</span>
 							</div>
-							<!-- <div class="column t-14 t-400">
-								<span class="o-7">
-									<a
-										target="_blank"
-										rel="external"
-										href="https://www.google.co.id/maps/dir/{user
-											.position[1]},{user.position[0]}/{delivery.sender
-											.position[1]},{delivery.sender
-											.position[0]}"
-									>
-										Rute
-									</a>
-								</span>
-								<span class="end"> </span>
-							</div> -->
 						</section>
 					</fieldset>
 					<fieldset class="card div p-16 white">
@@ -548,14 +556,7 @@
 						<fieldset class="card p-16 white">
 							<div class="t-16 t-500 o-9">Bukti Sampai</div>
 							<section class="section">
-								<label class="thumb-wrapper">
-									<input
-										class="file"
-										type="file"
-										accept="image/*"
-										capture
-										on:input="{inputFile}"
-									/>
+								<div class="thumb-wrapper">
 									{#if imageUrl}
 										<img
 											class="thumb"
@@ -566,7 +567,11 @@
 									{:else}
 										<Icon size="{56}" path="{mdiImagePlus}" />
 									{/if}
-								</label>
+									<button
+										type="button"
+										on:click="{() => (show_pick_image = !show_pick_image)}"
+									></button>
+								</div>
 							</section>
 						</fieldset>
 					{/if}
@@ -753,5 +758,36 @@
 		</Footer>
 		<Snackbar bind:this="{snackbar}" />
 		<RejectDialog bind:this="{rejectDialog}" />
+		<Dialog bind:active="{show_pick_image}">
+			<List>
+				<ListItem>
+					<div>Pilih Gambar</div>
+					<div slot="prepend">
+						<Icon path="{mdiImageOutline}" />
+					</div>
+					<input
+						class="input-file"
+						type="file"
+						accept="image/*"
+						on:input="{inputFile}"
+					/>
+				</ListItem>
+				{#if support_image_capture}
+					<ListItem>
+						<div>Ambil Foto</div>
+						<div slot="prepend">
+							<Icon path="{mdiCameraOutline}" />
+						</div>
+						<input
+							class="input-file"
+							type="file"
+							accept="image/*"
+							capture
+							on:input="{inputFile}"
+						/>
+					</ListItem>
+				{/if}
+			</List>
+		</Dialog>
 	</MaterialAppMin>
 </div>

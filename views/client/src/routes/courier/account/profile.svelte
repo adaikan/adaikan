@@ -3,46 +3,28 @@
 		MaterialAppMin,
 		ProgressLinear,
 		AppBar,
-		Footer,
 		Button,
 		Icon,
-		Menu,
-		NavigationDrawer,
-		Avatar,
-		List,
-		ListGroup,
-		ListItem,
-		ListItemGroup,
 		Card,
+		List,
+		ListItem,
 		TextField,
 		Textarea,
-		Switch,
-		Checkbox,
+		Dialog,
 	} from 'svelte-materialify/src';
 	import {
-		mdiAccountOutline,
-		mdiClipboardListOutline,
-		mdiBellOutline,
-		mdiTagOutline,
-		mdiLogout,
-		mdiAccountCircle,
-		mdiMapMarkerRadiusOutline,
-		mdiCheck,
-		mdiEyeOff,
-		mdiEye,
 		mdiMapOutline,
 		mdiChevronLeft,
 		mdiImagePlus,
+		mdiCameraOutline,
+		mdiImageOutline,
 	} from '@mdi/js';
 	import Snackbar from '$components/snackbar.svelte';
 	import { onMount, onDestroy, getContext } from 'svelte';
 	import { writable } from 'svelte/store';
 	import { fade, slide } from 'svelte/transition';
-	import { browser, dev } from '$app/env';
 	import { goto } from '$app/navigation';
-	import { assets } from '$app/paths';
-	import { page } from '$app/stores';
-	import { Diff } from '$lib/helper';
+	import { Diff, element_support } from '$lib/helper';
 	import * as rules from '$lib/rules';
 	import type { CourierClientApi } from '../__layout.svelte';
 </script>
@@ -58,6 +40,8 @@
 	let image: File | undefined;
 	let snackbar: Snackbar;
 	let disableSubmit = true;
+	let show_pick_image = false;
+	let support_image_capture = false;
 	$: {
 		if (copied) {
 			const changed = Diff.object(copied, user);
@@ -79,6 +63,7 @@
 			if (user.image) {
 				imageUrl = user.image;
 			}
+			support_image_capture = element_support('input', 'capture');
 		} catch (error: any) {
 		} finally {
 			$showProgress = false;
@@ -95,7 +80,7 @@
 			}
 			if (changed.image && image) {
 				changed.image = `${user.id}/${image.name}`;
-				await client.courier.uploadImage(changed.image, image);
+				changed.image = await client.courier.uploadImage(changed.image, image);
 			}
 			await client.courier.update({
 				where: { id: user.id },
@@ -118,127 +103,13 @@
 	) {
 		const file = event.currentTarget.files?.[0];
 		if (file && user) {
+			show_pick_image = false;
 			image = file;
 			user.image = file.name;
 			imageUrl = URL.createObjectURL(file);
 		}
 	}
 </script>
-
-<svelte:head>
-	<title>Profil</title>
-	<meta name="" content="" />
-</svelte:head>
-
-<div transition:slide>
-	<MaterialAppMin>
-		<ProgressLinear
-			bind:active="{$showProgress}"
-			bind:indeterminate="{$indeterminate}"
-			bind:value="{$progress}"
-			height="4px"
-			backgroundColor="secondary-color"
-			color="secondary-color" />
-		<AppBar class="primary-color {$showProgress ? 'top-4' : ''}">
-			<span slot="icon">
-				<Button fab icon text size="small" on:click="{() => history.back()}">
-					<Icon path="{mdiChevronLeft}" />
-				</Button>
-			</span>
-			<span slot="title">Profile</span>
-		</AppBar>
-		<main>
-			{#if user}
-				<form id="user" on:submit|preventDefault="{submit}">
-					<Card tile>
-						<label class="thumb-wrapper">
-							<input
-								type="file"
-								accept="image/*"
-								capture
-								on:input="{inputFile}" />
-							{#if imageUrl}
-								<img
-									class="thumb"
-									src="{imageUrl}"
-									alt="{user.name ?? ''}"
-									on:error="{() => (imageUrl = '')}" />
-							{:else}
-								<Icon size="{56}" path="{mdiImagePlus}" />
-							{/if}
-						</label>
-					</Card>
-					<br />
-					<TextField class="textfield" outlined value="{user.username}" readonly
-						>Username</TextField>
-					<TextField
-						outlined
-						bind:value="{user.email}"
-						type="email"
-						autocomplete="email"
-						rules="{rules.email}">
-						Email</TextField>
-					<TextField
-						outlined
-						bind:value="{user.name}"
-						placeholder="-"
-						autocomplete="name"
-						rules="{rules.name}">Nama</TextField>
-					<TextField
-						outlined
-						bind:value="{user.telp}"
-						placeholder="-"
-						type="tel"
-						autocomplete="tel-local"
-						rules="{rules.telp}">Nomor Handphone</TextField>
-					<Textarea
-						autogrow
-						rows="{3}"
-						outlined
-						value="{user.address ?? ''}"
-						placeholder="-"
-						readonly>
-						<div>Alamat</div>
-						<div slot="append">
-							<Button
-								fab
-								icon
-								text
-								size="small"
-								on:click="{async () => {
-									if (!disableSubmit) {
-										await submit();
-									}
-									goto('/courier/account/address/pin');
-								}}">
-								<Icon class="grey-text text-darken-3" path="{mdiMapOutline}" />
-							</Button>
-						</div>
-					</Textarea>
-				</form>
-			{:else}
-				<form>
-					<div class="thumb-wrapper">
-						<div class="thumb loading"></div>
-					</div>
-					<div class="textfield loading"></div>
-					<div class="textfield loading"></div>
-					<div class="textfield loading"></div>
-					<div class="textfield loading"></div>
-					<div class="textfield loading"></div>
-				</form>
-			{/if}
-			<section class="btn">
-				<Button
-					form="user"
-					type="submit"
-					class="{disableSubmit ? '' : 'primary-color'}"
-					disabled="{disableSubmit}">Perbarui</Button>
-			</section>
-		</main>
-		<Snackbar bind:this="{snackbar}" />
-	</MaterialAppMin>
-</div>
 
 <style lang="scss">
 	@import '../../../components/common';
@@ -263,11 +134,21 @@
 		display: grid;
 		place-items: center;
 		min-height: 150px;
-		input {
+		button {
 			position: absolute;
 			top: 0;
+			width: 100%;
+			height: 100%;
 			opacity: 0;
+			z-index: 1;
 		}
+	}
+	.input-file {
+		position: absolute;
+		top: 0;
+		width: 100%;
+		height: 100%;
+		opacity: 0;
 	}
 	.thumb {
 		margin: auto;
@@ -295,3 +176,158 @@
 		}
 	}
 </style>
+
+<svelte:head>
+	<title>Profil</title>
+	<meta name="" content="" />
+</svelte:head>
+
+<div transition:slide>
+	<MaterialAppMin>
+		<ProgressLinear
+			bind:active="{$showProgress}"
+			bind:indeterminate="{$indeterminate}"
+			bind:value="{$progress}"
+			height="4px"
+			backgroundColor="secondary-color"
+			color="secondary-color"
+		/>
+		<AppBar class="primary-color {$showProgress ? 'top-4' : ''}">
+			<span slot="icon">
+				<Button fab icon text size="small" on:click="{() => history.back()}">
+					<Icon path="{mdiChevronLeft}" />
+				</Button>
+			</span>
+			<span slot="title">Profile</span>
+		</AppBar>
+		<main>
+			{#if user}
+				<form id="user" on:submit|preventDefault="{submit}">
+					<Card tile>
+						<div class="thumb-wrapper">
+							{#if imageUrl}
+								<img
+									class="thumb"
+									src="{imageUrl}"
+									alt="{user.name ?? ''}"
+									on:error="{() => (imageUrl = '')}"
+								/>
+							{:else}
+								<Icon size="{56}" path="{mdiImagePlus}" />
+							{/if}
+							<button
+								type="button"
+								on:click="{() => (show_pick_image = !show_pick_image)}"
+							></button>
+						</div>
+					</Card>
+					<br />
+					<TextField class="textfield" outlined value="{user.username}" readonly
+						>Username</TextField
+					>
+					<TextField
+						outlined
+						bind:value="{user.email}"
+						type="email"
+						autocomplete="email"
+						rules="{rules.email}"
+					>
+						Email</TextField
+					>
+					<TextField
+						outlined
+						bind:value="{user.name}"
+						placeholder="-"
+						autocomplete="name"
+						rules="{rules.name}">Nama</TextField
+					>
+					<TextField
+						outlined
+						bind:value="{user.telp}"
+						placeholder="-"
+						type="tel"
+						autocomplete="tel-local"
+						rules="{rules.telp}">Nomor Handphone</TextField
+					>
+					<Textarea
+						autogrow
+						rows="{3}"
+						outlined
+						value="{user.address ?? ''}"
+						placeholder="-"
+						readonly
+					>
+						<div>Alamat</div>
+						<div slot="append">
+							<Button
+								fab
+								icon
+								text
+								size="small"
+								on:click="{async () => {
+									if (!disableSubmit) {
+										await submit();
+									}
+									goto('/courier/account/address/pin');
+								}}"
+							>
+								<Icon class="grey-text text-darken-3" path="{mdiMapOutline}" />
+							</Button>
+						</div>
+					</Textarea>
+				</form>
+			{:else}
+				<form>
+					<div class="thumb-wrapper">
+						<div class="thumb loading"></div>
+					</div>
+					<div class="textfield loading"></div>
+					<div class="textfield loading"></div>
+					<div class="textfield loading"></div>
+					<div class="textfield loading"></div>
+					<div class="textfield loading"></div>
+				</form>
+			{/if}
+			<section class="btn">
+				<Button
+					form="user"
+					type="submit"
+					class="{disableSubmit ? '' : 'primary-color'}"
+					disabled="{disableSubmit}">Perbarui</Button
+				>
+			</section>
+		</main>
+		<Snackbar bind:this="{snackbar}" />
+		<Dialog bind:active="{show_pick_image}">
+			<List>
+				<ListItem>
+					<div>Pilih Gambar</div>
+					<div slot="prepend">
+						<Icon path="{mdiImageOutline}" />
+					</div>
+					<input
+						class="input-file"
+						type="file"
+						accept="image/*"
+						on:input="{inputFile}"
+					/>
+				</ListItem>
+				{#if support_image_capture}
+					<ListItem>
+						<div>Ambil Foto</div>
+						<div slot="prepend">
+							<Icon path="{mdiCameraOutline}" />
+						</div>
+						<input
+							class="input-file"
+							type="file"
+							accept="image/*"
+							capture
+							on:input="{inputFile}"
+						/>
+					</ListItem>
+				{/if}
+			</List>
+		</Dialog>
+	</MaterialAppMin>
+</div>
