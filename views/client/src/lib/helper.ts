@@ -87,7 +87,7 @@ export function addProperty(source: object, key: string, value: any): object {
 		configurable: true,
 		enumerable: true,
 		value: value,
-		writable: true
+		writable: true,
 	});
 }
 
@@ -104,7 +104,12 @@ export class Promiseify<T = any> extends Promise<T> {
 	}
 	resolver!: (value?: T) => void;
 	rejector!: (error: any) => void;
-	constructor(executor?: (resolve: (value: T) => void, reject: (error: any) => any) => void) {
+	constructor(
+		executor?: (
+			resolve: (value: T) => void,
+			reject: (error: any) => any
+		) => void
+	) {
 		let resolver: any;
 		let rejector: any;
 		super((resolve, reject) => {
@@ -247,7 +252,7 @@ export function wait<
 	delay,
 	callback,
 	thisArg,
-	arg
+	arg,
 }: {
 	timeout: number;
 	delay?: number;
@@ -291,7 +296,9 @@ export function waitFrame<R>(ms?: number, callback?: (time: number) => R) {
 	});
 }
 export function parseDataUri(dataUri: string) {
-	const [, mime, text] = /data:(.*);base64,(.*)/.exec(dataUri) as RegExpExecArray;
+	const [, mime, text] = /data:(.*);base64,(.*)/.exec(
+		dataUri
+	) as RegExpExecArray;
 	const data = atob(text);
 	const view = new DataView(new ArrayBuffer(data.length));
 	for (let index = 0; index < data.length; index++) {
@@ -300,7 +307,7 @@ export function parseDataUri(dataUri: string) {
 	return {
 		mime,
 		data,
-		view
+		view,
 	};
 }
 export async function blobToDataUri(blob: Blob | File) {
@@ -321,7 +328,10 @@ export async function getImageUrl(url: string, init?: RequestInit) {
 	const response = await fetch(url, init);
 	return URL.createObjectURL(await response.blob());
 }
-export function mediaQuery(query: string, handler: (media: MediaQueryList) => void) {
+export function mediaQuery(
+	query: string,
+	handler: (media: MediaQueryList) => void
+) {
 	const media = matchMedia(query);
 	if (media.matches) {
 		handler(media);
@@ -331,7 +341,10 @@ export function mediaQuery(query: string, handler: (media: MediaQueryList) => vo
 	});
 }
 export class Diff {
-	static array<A extends Array<any>, R = A>(imutable: A, mutable: A): R | undefined {
+	static array<A extends Array<any>, R = A>(
+		imutable: A,
+		mutable: A
+	): R | undefined {
 		const result: R = [] as unknown as R;
 		for (const [key, i_value] of Object.entries(imutable)) {
 			let m_value = mutable[key] as any;
@@ -464,7 +477,9 @@ type ListOfType =
 	| 'undefined'
 	| 'object'
 	| 'function';
-type SubscribeHandler<T> = (value: T) => void | (() => void) | Promise<() => void>;
+type SubscribeHandler<T> = (
+	value: T
+) => void | (() => void) | Promise<() => void>;
 type SubscribePatchHandler = UnsafeUtil.SubscribePatchHandler;
 
 export type ChangePatch = UnsafeUtil.ChangePatch;
@@ -485,7 +500,9 @@ type Task<Data = any, Result = any> = {
 export class ProcessManagementUnsafe {
 	protected static global?: ProcessManagementUnsafe;
 	static get instance() {
-		return this.global ?? (this.global = new ProcessManagementUnsafe('@global'));
+		return (
+			this.global ?? (this.global = new ProcessManagementUnsafe('@global'))
+		);
 	}
 	constructor(name = '', debug = false) {
 		this.name = name;
@@ -567,11 +584,11 @@ export class ProcessManagementUnsafe {
 						timeout,
 						handler,
 						reject,
-						resolve
+						resolve,
 					};
 					this.isSleep ? this.wakeUp(task) : this.taskQueue.push(task);
 				}
-			)
+			),
 		};
 	}
 	dequeue(id: number) {
@@ -606,7 +623,9 @@ export class ProcessManagementUnsafe {
 	private async process() {
 		for await (const task of this.taskGenerator()) {
 			if (task.timeout) {
-				const index = this.derferQueue.findIndex((deferTask) => deferTask.key == task.key);
+				const index = this.derferQueue.findIndex(
+					(deferTask) => deferTask.key == task.key
+				);
 				if (index > -1) {
 					const deferTask = this.derferQueue.splice(index, 1)[0];
 					clearTimeout(deferTask.timeoutId);
@@ -669,11 +688,16 @@ export class ObserverUnsafe<Raw> {
 	protected type: ListOfType;
 	protected raw: Raw;
 	protected subscribers: SubscribeHandler<Raw>[] = [];
-	protected binds: WeakMap<ObserverUnsafe<Raw>, SubscribeHandler<Raw>> = new Map();
+	protected binds: WeakMap<ObserverUnsafe<Raw>, SubscribeHandler<Raw>> =
+		new Map();
 	// protected changeSet: ChangePatch[] = [];
 	// protected observers: ((changeSet: ChangePatch[]) => void)[] = [];
 	constructor(data: Raw, options?: { debug?: boolean; defer?: boolean }) {
-		const defOpts = Object.assign({}, { debug: true, defer: false }, options) as {
+		const defOpts = Object.assign(
+			{},
+			{ debug: true, defer: false },
+			options
+		) as {
 			debug: boolean;
 			defer: boolean;
 		};
@@ -692,7 +716,9 @@ export class ObserverUnsafe<Raw> {
 		if (value != this.raw) {
 			const type = typeof value;
 			if (type != this.type) {
-				throw new TypeError(`Mismatch on type, expect ${this.type} but ${type}`);
+				throw new TypeError(
+					`Mismatch on type, expect ${this.type} but ${type}`
+				);
 			}
 			this.raw = value;
 			this.publish(value);
@@ -767,8 +793,8 @@ export class ObserverUnsafe<Raw> {
 		return this;
 	}
 	protected publish(value: Raw) {
-		this.debug &&
-			console.time('@' + this.constructor.name + ' publish ' + (this.defer ? 'defer' : ''));
+		// this.debug &&
+		// 	console.time('@' + this.constructor.name + ' publish ' + (this.defer ? 'defer' : ''));
 		if (this.defer) {
 			throw new TypeError('The defer not support yet');
 			// ObserverUnsafe.process.queue(
@@ -786,8 +812,8 @@ export class ObserverUnsafe<Raw> {
 				subscriber(value);
 			}
 		}
-		this.debug &&
-			console.timeEnd('@' + this.constructor.name + ' publish ' + (this.defer ? 'defer' : ''));
+		// this.debug &&
+		// 	console.timeEnd('@' + this.constructor.name + ' publish ' + (this.defer ? 'defer' : ''));
 	}
 
 	[Symbol.toPrimitive](hint: 'string' | 'number' | 'default') {
@@ -804,7 +830,9 @@ export class ObserverAPIUnsafe<RawValue> extends ObserverUnsafe<RawValue> {
 		if (typeof handler == 'function') {
 			this.subscribersAPI.push(handler);
 		} else {
-			throw new TypeError(`Mismatch on type, expect function but ${typeof handler}`);
+			throw new TypeError(
+				`Mismatch on type, expect function but ${typeof handler}`
+			);
 		}
 		return this;
 	}
@@ -869,7 +897,9 @@ export class ObserverPatch<Raw> implements UnsafeUtil.ObservablePatch<Raw> {
 		if (typeof handler == 'function') {
 			this.subscribers.push(handler);
 		} else {
-			throw new TypeError(`Mismatch on type, expect function but ${typeof handler}`);
+			throw new TypeError(
+				`Mismatch on type, expect function but ${typeof handler}`
+			);
 		}
 		return this;
 	}
@@ -903,7 +933,8 @@ export class ChangeTrackerUnsafe<RawValue> {
 	constructor(value: RawValue) {
 		this.head = value;
 		this.temp = value;
-		this.copyMethod = (raw) => (Array.isArray(raw) ? (raw.slice() as unknown as RawValue) : raw);
+		this.copyMethod = (raw) =>
+			Array.isArray(raw) ? (raw.slice() as unknown as RawValue) : raw;
 		this.onChangeHandler = null;
 		this.onStageHandler = null;
 		this.stage();
@@ -911,9 +942,13 @@ export class ChangeTrackerUnsafe<RawValue> {
 	}
 	stage(change?: RawValue) {
 		this.stageList.unshift(
-			change ? this.copyMethod((this.temp = change)) : this.copyMethod(this.temp)
+			change
+				? this.copyMethod((this.temp = change))
+				: this.copyMethod(this.temp)
 		);
-		this.onStageHandler ? this.onStageHandler(this.copyMethod(this.temp)) : null;
+		this.onStageHandler
+			? this.onStageHandler(this.copyMethod(this.temp))
+			: null;
 		return this;
 	}
 	commit() {
@@ -941,4 +976,8 @@ export class ChangeTrackerUnsafe<RawValue> {
 		this.onChangeHandler ? this.onChangeHandler(this.copyMethod(change)) : null;
 		return this;
 	}
+}
+
+export function element_support(element: string, attribute: string) {
+	return attribute in document.createElement(element);
 }
