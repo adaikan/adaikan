@@ -101,12 +101,6 @@
 			link: '/order/all',
 			count: 0,
 		},
-		// {
-		// 	name: 'Selesai',
-		// 	icon: mdiCheck,
-		// 	link: '/order/done',
-		// 	count: 0,
-		// },
 		{
 			name: 'Penilaian',
 			icon: mdiStarOutline,
@@ -379,7 +373,7 @@
 	}
 	.thumb,
 	:global(.thumb) {
-		object-fit: contain;
+		object-fit: cover;
 		object-position: center;
 		width: 100%;
 		border-radius: 50%;

@@ -328,7 +328,7 @@
 		}
 	}
 	.thumb {
-		object-fit: contain;
+		object-fit: cover;
 		object-position: center;
 		aspect-ratio: 1;
 		border-radius: 50%;

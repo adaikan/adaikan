@@ -183,7 +183,7 @@
 		border-radius: 6px;
 	}
 	.thumb {
-		object-fit: contain;
+		object-fit: cover;
 		object-position: center;
 		width: 100%;
 		border-radius: 50%;
