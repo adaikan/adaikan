@@ -538,10 +538,11 @@ const route: FastifyPluginAsync = async (server, opts) => {
 			const sales = await orm.order.findMany({
 				where: { status: 'Done' },
 				include: {
+					buyer: true,
 					store: true,
 					item: { include: { product: true } },
 					delivery: true,
-					rating: { include: { buyer: true } },
+					rating: true,
 				},
 			});
 			reply.ok(sales);

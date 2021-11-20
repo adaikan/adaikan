@@ -67,15 +67,14 @@ export type OrderDataDetail = Order & {
 	};
 };
 export type Sale = Order & {
+	buyer: Buyer;
 	store: Store;
 	delivery: Delivery;
 	item: (OrderedItem & {
 		product: Product;
 	})[];
 	rating:
-		| (Rating & {
-				buyer: Buyer;
-		  })
+		| Rating
 		| null;
 };
 export type SaleDetail = Order & {
