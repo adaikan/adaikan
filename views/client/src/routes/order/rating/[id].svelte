@@ -9,23 +9,18 @@
 	} from 'svelte-materialify/src';
 	import {
 		mdiChevronLeft,
-		mdiMessageTextOutline,
 		mdiStarOutline,
 		mdiStar,
 		mdiStorefrontOutline,
 	} from '@mdi/js';
-	import { mdiClipboardTextClockOutline } from '$lib/icons';
 	import ProgressLinear from '$components/progress-linear.svelte';
 	import CartCard from '$components/cart-card.svelte';
 	import Snackbar from '$components/snackbar.svelte';
 	import UserUnauthDialog from '$components/user-unauth-dialog.svelte';
 
 	import { onMount, onDestroy, getContext } from 'svelte';
-	import { writable } from 'svelte/store';
 	import { fade, slide, scale } from 'svelte/transition';
-	import { browser, dev } from '$app/env';
 	import { goto } from '$app/navigation';
-	import { assets } from '$app/paths';
 	import { page, session } from '$app/stores';
 	import { Currency, wait } from '$lib/helper';
 
@@ -36,6 +31,7 @@
 
 <script lang="ts">
 	const client = getContext<BuyerClient>('buyer');
+	const id = +$page.params.id;
 	let loader: ProgressLinear;
 	let user: BuyerClient.Buyer;
 	let order: BuyerClient.Order & {
@@ -49,6 +45,7 @@
 	let comment = '';
 	let snackbar: Snackbar;
 	let showUserUnauthDialog = false;
+	let disable = true;
 
 	$: isLoading = loader?.active;
 
@@ -59,17 +56,13 @@
 			await client.ready;
 			user = await client.auth();
 
-			const { id } = $session;
-
-			if (!id) {
-				throw new Error('Unreachable order');
-			} else {
-				$session = {}
-			}
-
 			order = await client.api.order.search({
 				where: {
-					AND: [{ buyerId: user.id }, { id }],
+					AND: [
+						{ buyerId: user.id },
+						{ id },
+						{ status: { in: ['Confirm', 'Done'] } },
+					],
 				},
 				include: {
 					store: true,
@@ -78,7 +71,17 @@
 				},
 				rejectOnNotFound: true,
 			});
+
+			if (order.rating) {
+				stars = stars.fill(mdiStar, 0, order.rating.star);
+				comment = order.rating.comment;
+				throw new Error('Penilaian sudah ada');
+			} else {
+				disable = false;
+			}
 		} catch (error: any) {
+			snackbar.setText(error.message);
+			snackbar.show();
 		} finally {
 			loader.loaded();
 		}
@@ -87,131 +90,35 @@
 	async function send() {
 		try {
 			loader.loading();
+			disable = true;
 			if (order.rating) {
-				throw new Error("Penilaian sudah ada");
+				throw new Error('Penilaian sudah ada');
 			}
 			await client.api.rating.create({
 				data: {
-					star: stars.reduce((prev, curr) => (curr == mdiStar ? prev += 1 : prev), 0),
+					star: stars.reduce(
+						(prev, curr) => (curr == mdiStar ? (prev += 1) : prev),
+						0
+					),
 					comment,
 					buyerId: user.id,
 					orderId: order.id,
-				}
+				},
 			});
 			snackbar.setText('Terimakasih telah menilai');
 			snackbar.show();
 			loader.sequencing(1250);
-			await wait({timeout: 1250});
-			goto('/order', {replaceState: true});
+			await wait({ timeout: 1250 });
+			goto('/order', { replaceState: true });
 		} catch (error: any) {
 			snackbar.setText(error.message);
 			snackbar.show();
+			disable = false;
 		} finally {
 			loader.loaded();
 		}
 	}
-	async function storeDownloader(src: string) {
-		return URL.createObjectURL(await client.api.store.downloadImage(src));
-	}
-	async function productDownloader(src: string) {
-		return URL.createObjectURL(await client.api.product.downloadImage(src));
-	}
 </script>
-
-<svelte:head>
-	<title>{title}</title>
-	<meta name="" content="" />
-</svelte:head>
-
-<div transition:slide>
-	<MaterialAppMin>
-		<ProgressLinear bind:this="{loader}" />
-		<AppBar class="primary-color {$isLoading ? 'top-4' : ''}">
-			<span slot="icon">
-				<Button fab icon text size="small" on:click="{() => history.back()}">
-					<Icon path="{mdiChevronLeft}" />
-				</Button>
-			</span>
-			<span slot="title">{title}</span>
-		</AppBar>
-		<main>
-			<form>
-				{#if order}
-					<fieldset class="card p-16 subsection white">
-						<section class="bar">
-							{#if order.store.image}
-								{#await storeDownloader(order.store.image)}
-									<div class="thumb loading"></div>
-								{:then src}
-									<img class="thumb" src="{src}" alt="{order.store.name}" />
-								{:catch error}
-									<div class="thumb e">
-										<Icon path="{mdiStorefrontOutline}" />
-									</div>
-								{/await}
-							{:else}
-								<div class="thumb loading"></div>
-							{/if}
-							<div class="t-14">{order.store.name}</div>
-						</section>
-					</fieldset>
-					<fieldset class="card p-16 subsection white">
-						<div class="t-14 t-500 o-9">Daftar Pesanan</div>
-						<section class="subsection">
-							{#each order.item as item}
-								<CartCard
-									outlined
-									dense
-									control="{false}"
-									loading="{false}"
-									downloader="{productDownloader}"
-									image="{item.product.image}"
-									amount="{item.amount}"
-									data="{{
-										name: item.product.name,
-										price: item.price,
-									}}" />
-							{/each}
-						</section>
-					</fieldset>
-				{/if}
-				<fieldset class="card section p-16 white">
-					<section class="star">
-						{#each stars as star, index}
-							<div transition:scale>
-								<Button
-									icon
-									text
-									on:click="{() => {
-										stars = stars
-											.fill(mdiStar, 0, index + 1)
-											.fill(mdiStarOutline, index + 1);
-									}}">
-									<Icon
-										class="{star == mdiStar ? 'star-full' : ''}"
-										path="{star}" />
-								</Button>
-							</div>
-						{/each}
-					</section>
-					<Textarea rows="{3}" autogrow bind:value="{comment}"
-						>Tulis Komentar...</Textarea>
-				</fieldset>
-			</form>
-		</main>
-		<Footer class="white elevation-5">
-			<div class="btn">
-				{#if order}
-					<Button class="primary-color" on:click="{send}">Kirim</Button>
-				{:else}
-					<div class="loading">&nbsp;</div>
-				{/if}
-			</div>
-		</Footer>
-		<Snackbar bind:this="{snackbar}" />
-		<UserUnauthDialog bind:active="{showUserUnauthDialog}" />
-	</MaterialAppMin>
-</div>
 
 <style lang="scss">
 	@import '../../../components/common';
@@ -245,6 +152,9 @@
 		grid-auto-flow: column;
 		align-items: center;
 		column-gap: 16px;
+		@include medium-up {
+			grid-template-columns: 1fr 21fr;
+		}
 	}
 	.star {
 		display: flex;
@@ -364,3 +274,142 @@
 		}
 	}
 </style>
+
+<svelte:head>
+	<title>{title}</title>
+	<meta name="" content="" />
+</svelte:head>
+
+<div transition:slide>
+	<MaterialAppMin>
+		<ProgressLinear bind:this="{loader}" />
+		<AppBar class="primary-color {$isLoading ? 'top-4' : ''}">
+			<span slot="icon">
+				<Button fab icon text size="small" on:click="{() => history.back()}">
+					<Icon path="{mdiChevronLeft}" />
+				</Button>
+			</span>
+			<span slot="title">{title}</span>
+		</AppBar>
+		<main>
+			<form>
+				{#if order}
+					<fieldset class="card p-16 subsection white">
+						<section class="bar">
+							{#if order.store.image}
+								<img
+									class="thumb loading"
+									src="{order.store.image}"
+									alt="{order.store.name}"
+									on:error="{() => {
+										order.store.image = '';
+										order = order;
+									}}"
+								/>
+							{:else}
+								<div class="thumb e">
+									<Icon path="{mdiStorefrontOutline}" />
+								</div>
+							{/if}
+							<div class="t-14">{order.store.name}</div>
+						</section>
+					</fieldset>
+					<fieldset class="card p-16 subsection white">
+						<div class="t-14 t-500 o-9">Daftar Pesanan</div>
+						<section class="subsection">
+							{#each order.item as item}
+								<CartCard
+									outlined
+									dense
+									control="{false}"
+									loading="{false}"
+									image="{item.product.image}"
+									amount="{item.amount}"
+									data="{{
+										name: item.product.name,
+										price: item.price,
+									}}"
+								/>
+							{/each}
+						</section>
+					</fieldset>
+					<fieldset class="card section p-16 white">
+						<section class="star">
+							{#each stars as star, index}
+								<div transition:scale>
+									<Button
+										icon
+										text
+										on:click="{() => {
+											stars = stars
+												.fill(mdiStar, 0, index + 1)
+												.fill(mdiStarOutline, index + 1);
+										}}"
+									>
+										<Icon
+											class="{star == mdiStar ? 'star-full' : ''}"
+											path="{star}"
+										/>
+									</Button>
+								</div>
+							{/each}
+						</section>
+						<Textarea rows="{3}" autogrow bind:value="{comment}"
+							>Tulis Komentar...</Textarea
+						>
+					</fieldset>
+				{:else}
+					<div class="card subsection p-8">
+						<div class="bar">
+							<div class="thumb loading">&nbsp;</div>
+							<div class="loading">&nbsp;</div>
+						</div>
+						<hr class="hr" />
+						<CartCard />
+						<hr class="hr" />
+						<section class="section">
+							<span class="t-6 loading">&nbsp;</span>
+							<section class="subsection t-3">
+								<div class="loading">&nbsp;</div>
+								<div class="loading">&nbsp;</div>
+							</section>
+						</section>
+						<section class="section">
+							<div class="column t-14">
+								<span class="loading">&nbsp;</span>
+								<span class="loading">&nbsp;</span>
+							</div>
+						</section>
+						<section class="section">
+							<div class="column t-14">
+								<span class="loading">&nbsp;</span>
+								<span class="loading">&nbsp;</span>
+							</div>
+						</section>
+						<section class="section">
+							<div class="column t-16">
+								<span class="loading">&nbsp;</span>
+								<span class="loading">&nbsp;</span>
+							</div>
+						</section>
+					</div>
+				{/if}
+			</form>
+		</main>
+		<Footer class="white elevation-5">
+			<div class="btn">
+				{#if order}
+					<Button
+						class="{disable ? '' : 'primary-color'}"
+						disabled="{disable}"
+						on:click="{send}">Kirim</Button
+					>
+				{:else}
+					<div class="loading">&nbsp;</div>
+				{/if}
+			</div>
+		</Footer>
+		<Snackbar bind:this="{snackbar}" />
+		<UserUnauthDialog bind:active="{showUserUnauthDialog}" />
+	</MaterialAppMin>
+</div>
