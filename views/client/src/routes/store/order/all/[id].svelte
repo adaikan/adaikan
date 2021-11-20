@@ -127,7 +127,7 @@
 	}
 	function toDate(value: any) {
 		if (value) {
-			return new Date(value).toLocaleString();
+			return new Date(value).toLocaleString('id');
 		} else {
 			return '---';
 		}
@@ -282,6 +282,9 @@
 				line-height: 1.5;
 			}
 		}
+		.star-full {
+			color: #ffcc00;
+		}
 	}
 </style>
 
@@ -311,23 +314,25 @@
 			<form autocomplete="off">
 				{#if order}
 					<fieldset class="card p-16 section white">
-						<div class="t-16 t-500 o-9">Pesanan</div>
-						<div class="end">
-							<Chip label size="small">
-								{#if order.status == 'Queue'}
-									Menunggu
-								{:else if order.status == 'Process'}
-									Di Proses
-								{:else if order.status == 'Delivery'}
-									Di Kirim
-								{:else if order.status == 'Confirm'}
-									Konfirmasi
-								{:else if order.status == 'Done'}
-									Selesai
-								{:else if order.status == 'Reject'}
-									Ditolak
-								{/if}
-							</Chip>
+						<div class="column">
+							<div class="t-16 t-500 o-9">Pesanan</div>
+							<div class="end">
+								<Chip label size="small">
+									{#if order.status == 'Queue'}
+										Menunggu
+									{:else if order.status == 'Process'}
+										Di Proses
+									{:else if order.status == 'Delivery'}
+										Di Kirim
+									{:else if order.status == 'Confirm'}
+										Konfirmasi
+									{:else if order.status == 'Done'}
+										Selesai
+									{:else if order.status == 'Reject'}
+										Ditolak
+									{/if}
+								</Chip>
+							</div>
 						</div>
 						<hr class="hr" />
 						<section class="subsection">
@@ -538,11 +543,7 @@
 										</div>
 									{/each}
 								</section>
-								<Textarea
-									rows="{3}"
-									autogrow
-									readonly>Komentar</Textarea
-								>
+								<Textarea rows="{3}" autogrow readonly>Komentar</Textarea>
 							</section>
 						</fieldset>
 					{/if}

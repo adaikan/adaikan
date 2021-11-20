@@ -192,7 +192,7 @@
 	}
 	function toDate(value: any) {
 		if (value) {
-			return new Date(value).toLocaleString();
+			return new Date(value).toLocaleString('id');
 		} else {
 			return '---';
 		}

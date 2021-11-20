@@ -15,6 +15,8 @@
 	import {
 		mdiMessageTextOutline,
 		mdiChevronLeft,
+		mdiStarOutline,
+		mdiStar,
 	} from '@mdi/js';
 	import ProgressLinear from '$components/progress-linear.svelte';
 	import NoStore from '../_no-store-.svelte';
@@ -47,6 +49,7 @@
 			sender: SellerClientApi.Store;
 			courier: SellerClientApi.Courier | null;
 		};
+		rating: SellerClientApi.Rating | null;
 	};
 	let user: SellerClientApi.Seller;
 	let loader: ProgressLinear;
@@ -54,6 +57,7 @@
 	let noStore: NoStore;
 	let rejectDialog: RejectDialog;
 	let isLoading = writable(true);
+	let stars: string[] = Array(5).fill(mdiStarOutline, 0, 5);
 	let contact: { name: string; telp: string; node: number }[] = [];
 
 	$: isLoading = loader?.active;
@@ -85,6 +89,7 @@
 					delivery: {
 						include: { recipient: true, sender: true, courier: true },
 					},
+					rating: true,
 				},
 				rejectOnNotFound: true,
 			});
@@ -146,7 +151,7 @@
 	}
 	function toDate(value: any) {
 		if (value) {
-			return new Date(value).toLocaleString();
+			return new Date(value).toLocaleString('id');
 		} else {
 			return '---';
 		}
@@ -176,6 +181,11 @@
 		border: none;
 		display: grid;
 		row-gap: 8px;
+	}
+	.star {
+		display: flex;
+		justify-content: center;
+		column-gap: 4px;
 	}
 	.btn {
 		width: stretch;
@@ -278,6 +288,9 @@
 			.s-list-item__subtitle {
 				line-height: 1.5;
 			}
+		}
+		.star-full {
+			color: #ffcc00;
 		}
 	}
 </style>
@@ -486,6 +499,48 @@
 							>
 						</div>
 					</fieldset>
+					{#if order.rating}
+						<fieldset class="card div p-16 white">
+							<div class="t-16 t-500 o-9">Penilaian</div>
+							<section class="section">
+								<section class="star">
+									{#each stars
+										.slice()
+										.fill(mdiStar, 0, order.rating.star) as star, index}
+										<div transition:scale>
+											<Icon
+												class="{star == mdiStar ? 'star-full' : ''}"
+												path="{star}"
+											/>
+										</div>
+									{/each}
+								</section>
+								<Textarea
+									rows="{3}"
+									autogrow
+									value="{order.rating.comment}"
+									readonly>Komentar</Textarea
+								>
+							</section>
+						</fieldset>
+					{:else}
+						<fieldset class="card div p-16 white">
+							<div class="t-16 t-500 o-9">Penilaian</div>
+							<section class="section">
+								<section class="star">
+									{#each stars as star}
+										<div transition:scale>
+											<Icon
+												class="{star == mdiStar ? 'star-full' : ''}"
+												path="{star}"
+											/>
+										</div>
+									{/each}
+								</section>
+								<Textarea rows="{3}" autogrow readonly>Komentar</Textarea>
+							</section>
+						</fieldset>
+					{/if}
 				{:else}
 					<fieldset class="card p-16 white section">
 						<div class="t-16 loading">&nbsp;</div>
