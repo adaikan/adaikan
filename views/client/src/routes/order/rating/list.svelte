@@ -5,29 +5,20 @@
 		Button,
 		Textarea,
 		Icon,
-		Footer,
 	} from 'svelte-materialify/src';
 	import {
 		mdiChevronLeft,
-		mdiMessageTextOutline,
 		mdiStarOutline,
 		mdiStar,
 		mdiStorefrontOutline,
 	} from '@mdi/js';
-	import { mdiClipboardTextClockOutline } from '$lib/icons';
 	import ProgressLinear from '$components/progress-linear.svelte';
 	import CartCard from '$components/cart-card.svelte';
 	import Snackbar from '$components/snackbar.svelte';
 	import UserUnauthDialog from '$components/user-unauth-dialog.svelte';
 
 	import { onMount, onDestroy, getContext } from 'svelte';
-	import { writable } from 'svelte/store';
 	import { fade, slide, scale } from 'svelte/transition';
-	import { browser, dev } from '$app/env';
-	import { goto } from '$app/navigation';
-	import { assets } from '$app/paths';
-	import { page, session } from '$app/stores';
-	import { Currency, wait } from '$lib/helper';
 
 	import type { BuyerClient } from '../../__layout.svelte';
 
@@ -47,7 +38,6 @@
 		};
 	})[] = [];
 	let stars: string[] = Array(5).fill(mdiStarOutline, 0, 5);
-	let comment = '';
 	let snackbar: Snackbar;
 	let showUserUnauthDialog = false;
 
@@ -83,97 +73,7 @@
 		}
 	}
 	async function release() {}
-	async function storeDownloader(src: string) {
-		return URL.createObjectURL(await client.api.store.downloadImage(src));
-	}
-	async function productDownloader(src: string) {
-		return URL.createObjectURL(await client.api.product.downloadImage(src));
-	}
 </script>
-
-<svelte:head>
-	<title>{title}</title>
-	<meta name="" content="" />
-</svelte:head>
-
-<div transition:slide>
-	<MaterialAppMin>
-		<ProgressLinear bind:this="{loader}" />
-		<AppBar class="primary-color {$isLoading ? 'top-4' : ''}">
-			<span slot="icon">
-				<Button fab icon text size="small" on:click="{() => history.back()}">
-					<Icon path="{mdiChevronLeft}" />
-				</Button>
-			</span>
-			<span slot="title">{title}</span>
-		</AppBar>
-		<main>
-			{#each rating as item}
-				<section class="section p-16 white">
-					<section class="subsection">
-						<section class="bar">
-							{#if item.order.store.image}
-								{#await storeDownloader(item.order.store.image)}
-									<div class="thumb loading"></div>
-								{:then src}
-									<img
-										class="thumb"
-										src="{src}"
-										alt="{item.order.store.name}" />
-								{:catch error}
-									<div class="thumb e">
-										<Icon path="{mdiStorefrontOutline}" />
-									</div>
-								{/await}
-							{:else}
-								<div class="thumb loading"></div>
-							{/if}
-							<div class="t-14">{item.order.store.name}</div>
-						</section>
-					</section>
-					<hr class="hr" />
-					<section class="subsection">
-						<div class="t-14 t-500 o-9">Daftar Pesanan</div>
-						<section class="subsection">
-							{#each item.order.item as item}
-								<CartCard
-									outlined
-									dense
-									control="{false}"
-									loading="{false}"
-									downloader="{productDownloader}"
-									image="{item.product.image}"
-									amount="{item.amount}"
-									data="{{
-										name: item.product.name,
-										price: item.price,
-									}}" />
-							{/each}
-						</section>
-					</section>
-					<hr class="hr" />
-					<section class="subsection">
-						<section class="star">
-							{#each stars
-								.slice()
-								.fill(mdiStar, 0, item.star) as star}
-								<div transition:scale>
-									<Icon
-										class="{star == mdiStar ? 'star-full' : ''}"
-										path="{star}" />
-								</div>
-							{/each}
-						</section>
-						<Textarea rows="{3}" autogrow value="{item.comment}" readonly
-							>Komentar</Textarea>
-					</section>
-				</section>
-			{/each}
-		</main>
-		<Snackbar bind:this="{snackbar}" />
-		<UserUnauthDialog bind:active="{showUserUnauthDialog}" />
-	</MaterialAppMin>
-</div>
 
 <style lang="scss">
 	@import '../../../components/common';
@@ -207,6 +107,9 @@
 		grid-auto-flow: column;
 		align-items: center;
 		column-gap: 16px;
+		@include medium-up {
+			grid-template-columns: 1fr 21fr;
+		}
 	}
 	.star {
 		display: flex;
@@ -223,9 +126,8 @@
 		align-items: center;
 		column-gap: 8px;
 	}
-
 	.thumb {
-		object-fit: contain;
+		object-fit: cover;
 		object-position: center;
 		width: 100%;
 		aspect-ratio: 1;
@@ -326,3 +228,86 @@
 		}
 	}
 </style>
+
+<svelte:head>
+	<title>{title}</title>
+	<meta name="" content="" />
+</svelte:head>
+
+<div transition:slide>
+	<MaterialAppMin>
+		<ProgressLinear bind:this="{loader}" />
+		<AppBar class="primary-color {$isLoading ? 'top-4' : ''}">
+			<span slot="icon">
+				<Button fab icon text size="small" on:click="{() => history.back()}">
+					<Icon path="{mdiChevronLeft}" />
+				</Button>
+			</span>
+			<span slot="title">{title}</span>
+		</AppBar>
+		<main>
+			{#each rating as item}
+				<section class="card section p-16 white">
+					<section class="subsection">
+						<section class="bar">
+							{#if item.order.store.image}
+								<img
+									class="thumb loading"
+									src="{item.order.store.image}"
+									alt="{item.order.store.name}"
+									on:error="{() => {
+										item.order.store.image = '';
+										item = item;
+									}}"
+								/>
+							{:else}
+								<div class="thumb e">
+									<Icon path="{mdiStorefrontOutline}" />
+								</div>
+							{/if}
+							<div class="t-14">{item.order.store.name}</div>
+						</section>
+					</section>
+					<hr class="hr" />
+					<section class="subsection">
+						<div class="t-14 t-500 o-9">Daftar Pesanan</div>
+						<section class="subsection">
+							{#each item.order.item as item}
+								<CartCard
+									outlined
+									dense
+									control="{false}"
+									loading="{false}"
+									image="{item.product.image}"
+									amount="{item.amount}"
+									data="{{
+										name: item.product.name,
+										price: item.price,
+									}}"
+								/>
+							{/each}
+						</section>
+					</section>
+					<hr class="hr" />
+					<section class="subsection">
+						<section class="star">
+							{#each stars.slice().fill(mdiStar, 0, item.star) as star}
+								<div transition:scale>
+									<Icon
+										class="{star == mdiStar ? 'star-full' : ''}"
+										path="{star}"
+									/>
+								</div>
+							{/each}
+						</section>
+						<Textarea rows="{3}" autogrow value="{item.comment}" readonly
+							>Komentar</Textarea
+						>
+					</section>
+				</section>
+			{/each}
+		</main>
+		<Snackbar bind:this="{snackbar}" />
+		<UserUnauthDialog bind:active="{showUserUnauthDialog}" />
+	</MaterialAppMin>
+</div>
