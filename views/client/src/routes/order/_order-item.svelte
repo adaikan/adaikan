@@ -89,7 +89,7 @@
 		}
 	}
 	.thumb {
-		object-fit: contain;
+		object-fit: cover;
 		object-position: center;
 		width: 100%;
 		aspect-ratio: 1;
