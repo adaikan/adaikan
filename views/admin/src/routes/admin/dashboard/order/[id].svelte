@@ -78,15 +78,15 @@
 			await client.ready;
 			business = await client.admin.getBusiness();
 			order = await client.admin.order(id);
-			order.createOn = new Date(order.createOn).toISOString().slice(0, -1) as any;
+			order.createOn = new Date(order.createOn).toISOString().slice(0, -4) + '000' as any;
 			order.finishOn = order.finishOn
-				? (new Date(order.finishOn).toISOString().slice(0, -1) as any)
+				? (new Date(order.finishOn).toISOString().slice(0, -4) + '000' as any)
 				: '';
 			order.delivery.sentOn = order.delivery.sentOn
-				? (new Date(order.delivery.sentOn).toISOString().slice(0, -1) as any)
+				? (new Date(order.delivery.sentOn).toISOString().slice(0, -4) + '000' as any)
 				: '';
 			order.delivery.receiveOn = order.delivery.receiveOn
-				? (new Date(order.delivery.receiveOn).toISOString().slice(0, -1) as any)
+				? (new Date(order.delivery.receiveOn).toISOString().slice(0, -4) + '000' as any)
 				: '';
 			copy = Diff.objectCopy(order);
 			contact = [

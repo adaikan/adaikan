@@ -10,10 +10,7 @@
 	import Footer from '$components/footer.svelte';
 	import Progress from '$components/progress.svelte';
 	import Menu from '$components/menu.svelte';
-	import List from '$components/list.svelte';
 	import ListItem from '$components/list-item.svelte';
-	import Modal from '$components/modal.svelte';
-	import Avatar from '$components/avatar.svelte';
 	import AppbarContent from '../_appbar.svelte';
 	import DrawerContent from '../_drawer.svelte';
 	import FooterContent from '../_footer.svelte';
@@ -64,15 +61,15 @@
 			await client.ready;
 			business = await client.admin.getBusiness();
 			sale = await client.admin.sale(id);
-			sale.createOn = new Date(sale.createOn).toISOString().slice(0, -1) as any;
+			sale.createOn = new Date(sale.createOn).toLocaleString() as any;
 			sale.finishOn = sale.finishOn
-				? (new Date(sale.finishOn).toISOString().slice(0, -1) as any)
+				? (new Date(sale.finishOn).toLocaleString() as any)
 				: '';
 			sale.delivery.sentOn = sale.delivery.sentOn
-				? (new Date(sale.delivery.sentOn).toISOString().slice(0, -1) as any)
+				? (new Date(sale.delivery.sentOn).toLocaleString() as any)
 				: '';
 			sale.delivery.receiveOn = sale.delivery.receiveOn
-				? (new Date(sale.delivery.receiveOn).toISOString().slice(0, -1) as any)
+				? (new Date(sale.delivery.receiveOn).toLocaleString() as any)
 				: '';
 			copy = Diff.objectCopy(sale);
 			contact = [
@@ -156,12 +153,10 @@
 									<div class="flex justify-between">
 										<div for="order-createat" class="text-sm">Create at</div>
 										<div class="text-sm">{sale.createOn}</div>
-										<!-- <button /> -->
 									</div>
 									<div class="flex justify-between">
 										<div for="order-finishat" class="text-sm">Finish at</div>
 										<div class="text-sm">{sale.finishOn}</div>
-										<!-- <button /> -->
 									</div>
 								</section>
 								<section class="flex flex-col gap-2 p-4 bg-base-200 rounded-md">
@@ -179,12 +174,10 @@
 									<div class="flex justify-between">
 										<div for="order-sentat" class="text-sm">Sent at</div>
 										<div class="text-sm">{sale.delivery.sentOn}</div>
-										<!-- <button /> -->
 									</div>
 									<div class="flex justify-between">
 										<div for="order-receiverat" class="text-sm">Receive at</div>
 										<div class="text-sm">{sale.delivery.receiveOn}</div>
-										<!-- <button /> -->
 									</div>
 								</section>
 								<section class="flex flex-col gap-2 p-4 bg-base-200 rounded-md">
@@ -368,15 +361,13 @@
 										</div>
 									</div>
 								</section>
-							</div>
-							{#if sale.rating}
 								<section class="flex flex-col gap-2 p-4 bg-base-200 rounded-md">
 									<div class="flex">
 										<div class="text-base font-semibold">Rating</div>
 									</div>
 									<hr class="h-[1px] border-0 opacity-10 bg-black dark:bg-white" />
 									<div class="flex justify-center gap-1">
-										{#each Array(5).fill(true, 0, sale.rating.star) as star}
+										{#each Array(5).fill(true, 0, sale.rating?.star ?? 0) as star}
 											<svg
 												class="w-6 h-6 {star ? 'text-warning fill-current' : ''}"
 												fill="none"
@@ -398,13 +389,13 @@
 										</label>
 										<textarea
 											id="comment"
-											value={sale.rating.comment}
+											value={sale.rating?.comment ?? ''}
 											readonly
 											class="textarea textarea-bordered"
 										/>
 									</div>
 								</section>
-							{/if}
+							</div>
 							<div class="flex gap-2">
 								<button
 									id="chat"
