@@ -207,10 +207,10 @@
 		opacity: 0.7;
 	}
 	.thumb {
-		object-fit: contain;
-		object-position: center;
 		width: 100%;
 		aspect-ratio: 1;
+		object-fit: cover;
+		object-position: center;
 		background-color: #efefef;
 		border-radius: 6px;
 		&.e {
