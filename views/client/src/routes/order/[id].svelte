@@ -114,8 +114,7 @@
 				snackbar.show();
 				loader.sequencing(1250);
 				await wait({ timeout: 1250 });
-				$session = { id: order.id };
-				goto('/order/rating', { replaceState: true });
+				goto('/order/rating/' + order.id, { replaceState: true });
 			}
 		} catch (error: any) {
 			snackbar.setText(error.message);
